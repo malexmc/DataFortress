@@ -58,6 +58,7 @@ class DataFortress():
         def countEntrances(self):
             '''Draws "lines" from the edge of the board straight towards the middle. If it hits an "inner" tile (the middle 4x4), then it is an entrance'''
             entrance_count = 0
+            entrances = []
             #Get valid starting spaces. No Corners.
             indices = []
             for col in range(1,self.GRID_MAX):
@@ -67,9 +68,34 @@ class DataFortress():
                 indices.append([row,0])
                 indices.append([row, self.GRID_MAX])
 
-            for index in indices:
-                if index[0] == 0: #coming from the top, so looking to hit row 2
-                    continue #TODO: Finish this
+            for ii,jj in indices:
+                if ii == 0: #coming from the top, so looking to hit row 2
+                    if self.board[ii][jj] == []:
+                        if self.board[ii+1][jj] == []:
+                            if self.board[ii+2][jj] == []:
+                                entrance_count += 1
+                                entrances.append([ii,jj])
+                elif ii == self.GRID_MAX: #coming from the bottom, so looking to hit row 5
+                    if self.board[ii][jj] == []:
+                        if self.board[ii-1][jj] == []:
+                            if self.board[ii-1][jj] == []:
+                                entrance_count += 1
+                                entrances.append([ii,jj])
+                elif jj == 0: #coming from the left, so looking to hit column 2
+                    if self.board[ii][jj] == []:
+                        if self.board[ii][jj+1] == []:
+                            if self.board[ii][jj+2] == []:
+                                entrance_count += 1
+                                entrances.append([ii,jj])
+                elif jj == self.GRID_MAX: #coming from the right, so looking to hit row 2
+                    if self.board[ii][jj] == []:
+                        if self.board[ii][jj-1] == []:
+                            if self.board[ii][jj-2] == []:
+                                entrance_count += 1
+                                entrances.append([ii,jj])
+            print("Entrances=%s" % entrance_count)
+            print(entrances)
+            return entrance_count
 
         def addWalls(self):
             #Start with a random space in the outer 2 layers
@@ -89,7 +115,7 @@ class DataFortress():
             #Place more outer walls
             fail_count = 0
             more_walls = True
-            while more_walls:
+            while self.countEntrances() > 4:
                 current_cell = outer_layer_spaces[random.randint(0,len(outer_layer_spaces)-1)]
                 #If the cell is unused
                 if self.isEmpty(current_cell[0],current_cell[1]):
@@ -99,13 +125,9 @@ class DataFortress():
                     for array in surroundings:
                         if array[2] == [WALL_VALUE]:
                             count_walls = count_walls + 1
-                    if count_walls <= 3:
+                    if count_walls < 3:
                         self.setCellValue(current_cell[0],current_cell[1], [WALL_VALUE])
-                    else:
-                        fail_count += 1
-                        if fail_count:
-                            more_walls = False
-
+            self.countEntrances()
             
 
     def skills_set(self):
