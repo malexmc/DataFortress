@@ -1,6 +1,7 @@
 import random
 
-WALL_VALUE = 'X'
+WALL_VALUE = '---'
+BLANK_VALUE = '   '
 
 def roll(faces):
     return random.randint(1,faces)
@@ -22,14 +23,14 @@ class DataFortress():
 
         def __init__(self, method="traditional"):
             self.board = {}
-            self.GRID_MAX = 7 #playing on an 8x8 board
+            self.board_legend = {}
+            self.GRID_MAX = 19 #playing on an 8x8 board
             #Make blank board of 8x8
-            for ii in range (8):
+            for ii in range (self.GRID_MAX+1):
                 row = {}
-                for jj in range(8):
+                for jj in range(self.GRID_MAX+1):
                     row[jj] = []
                 self.board[ii] = row
-            self.addWalls()
 
         def getAllIndices(self):
             indices = []
@@ -37,6 +38,16 @@ class DataFortress():
                 for jj in range(0,self.GRID_MAX+1):
                     indices.append([ii,jj])
             return indices
+
+        def isNeighbor(self, home, neighbor):
+            #Check orthogonal neighbors
+            adjacent = [
+                [home[0]-1, home[1]],
+                [home[0]+1, home[1]],
+                [home[0], home[1]-1],
+                [home[0], home[1]+1]
+            ]
+            return neighbor in adjacent
 
         def getSurrounding(self,row,col):
             surrounding = []
@@ -48,13 +59,36 @@ class DataFortress():
                         surrounding.append([ii,jj,[]])
             return surrounding
 
-        def isEmpty(self,ii,jj):
-            return self.board[ii][jj] == []
+        def isEmpty(self,ii_jj_array):
+            return self.board[ii_jj_array[0]][ii_jj_array[1]] == []
 
         def setCellValue(self, ii,jj, value_array):
             self.board[ii][jj] = value_array
 
-        
+        def setEntranceMax(self):
+            self.ENTRANCE_MAX = 0
+            result = roll(10)
+            if result in [1]:
+                self.ENTRANCE_MAX = 4
+            elif result in [2,3]:
+                self.ENTRANCE_MAX = 3
+            elif result in [4,5,6,7]:
+                self.ENTRANCE_MAX = 2
+            elif result in [8,9,10]:
+                self.ENTRANCE_MAX = 1
+
+        def setInnerWallMax(self):
+            self.INNER_WALL_MAX = 0
+            result = roll(10)
+            if result in [1]:
+                self.INNER_WALL_MAX = 5
+            elif result in [2,3,4,5]:
+                self.INNER_WALL_MAX = 4
+            elif result in [6,7,8]:
+                self.INNER_WALL_MAX = 3
+            elif result in [9,10]:
+                self.INNER_WALL_MAX = 2            
+
         def countEntrances(self):
             '''Draws "lines" from the edge of the board straight towards the middle. If it hits an "inner" tile (the middle 4x4), then it is an entrance'''
             entrance_count = 0
@@ -69,66 +103,71 @@ class DataFortress():
                 indices.append([row, self.GRID_MAX])
 
             for ii,jj in indices:
-                if ii == 0: #coming from the top, so looking to hit row 2
-                    if self.board[ii][jj] == []:
-                        if self.board[ii+1][jj] == []:
-                            if self.board[ii+2][jj] == []:
-                                entrance_count += 1
-                                entrances.append([ii,jj])
-                elif ii == self.GRID_MAX: #coming from the bottom, so looking to hit row 5
-                    if self.board[ii][jj] == []:
-                        if self.board[ii-1][jj] == []:
-                            if self.board[ii-1][jj] == []:
-                                entrance_count += 1
-                                entrances.append([ii,jj])
-                elif jj == 0: #coming from the left, so looking to hit column 2
-                    if self.board[ii][jj] == []:
-                        if self.board[ii][jj+1] == []:
-                            if self.board[ii][jj+2] == []:
-                                entrance_count += 1
-                                entrances.append([ii,jj])
-                elif jj == self.GRID_MAX: #coming from the right, so looking to hit row 2
-                    if self.board[ii][jj] == []:
-                        if self.board[ii][jj-1] == []:
-                            if self.board[ii][jj-2] == []:
-                                entrance_count += 1
-                                entrances.append([ii,jj])
-            print("Entrances=%s" % entrance_count)
-            print(entrances)
+                if ii == 0: #coming from the top, so looking to pass through walls on left and right
+                    while ii < self.GRID_MAX-1:
+                        if (self.board[ii][jj] == [] and
+                            self.board[ii+1][jj] == [] and
+                            self.board[ii][jj-1] == [WALL_VALUE] and
+                            self.board[ii][jj+1] == [WALL_VALUE]
+                        ):
+                            entrance_count += 1
+                            entrances.append([ii,jj])
+                        ii += 1
+                elif ii == self.GRID_MAX: #coming from the bottom, so looking to pass through walls on left and right
+                    while ii > 1:
+                        if (self.board[ii][jj] == [] and
+                            self.board[ii-1][jj] == [] and
+                            self.board[ii][jj-1] == [WALL_VALUE] and
+                            self.board[ii][jj+1] == [WALL_VALUE]
+                        ):
+                            entrance_count += 1
+                            entrances.append([ii,jj])
+                        ii -= 1
+                elif jj == 0: #coming from the bottom, so looking to pass through walls on left and right
+                    while jj < self.GRID_MAX-1:
+                        if (self.board[ii][jj] == [] and
+                            self.board[ii][jj+1] == [] and
+                            self.board[ii-1][jj] == [WALL_VALUE] and
+                            self.board[ii+1][jj] == [WALL_VALUE]
+                        ):
+                            entrance_count += 1
+                            entrances.append([ii,jj])
+                        jj += 1
+                elif jj == self.GRID_MAX: #coming from the bottom, so looking to pass through walls on left and right
+                    while jj > 1:
+                        if (self.board[ii][jj] == [] and
+                            self.board[ii][jj-1] == [] and
+                            self.board[ii-1][jj] == [WALL_VALUE] and
+                            self.board[ii+1][jj] == [WALL_VALUE]
+                        ):
+                            entrance_count += 1
+                            entrances.append([ii,jj])
+                        jj -= 1
+
             return entrance_count
 
-        def addWalls(self):
-            #Start with a random space in the outer 2 layers
-            outer_layer_spaces = []
+        def getOuterSpaceIndices(self):
+            outer_space_indices = []
             for ii in [0,1,6,7]:
                 for jj in range(0,7):
-                    outer_layer_spaces.append([ii,jj])
+                    outer_space_indices.append([ii,jj])
             for jj in [0,1,6,7]:
                 for ii in range(0,7):
-                    if [ii,jj] not in outer_layer_spaces:
-                        outer_layer_spaces.append([ii,jj])
-
-            #set the first spot to a wall
-            first_spot = outer_layer_spaces[random.randint(0,len(outer_layer_spaces))]
-            self.setCellValue(first_spot[0],first_spot[1],[WALL_VALUE])
-
-            #Place more outer walls
-            fail_count = 0
-            more_walls = True
-            while self.countEntrances() > 4:
-                current_cell = outer_layer_spaces[random.randint(0,len(outer_layer_spaces)-1)]
-                #If the cell is unused
-                if self.isEmpty(current_cell[0],current_cell[1]):
-                    #Count the surrounding walls
-                    surroundings = self.getSurrounding(current_cell[0],current_cell[1])
-                    count_walls = 0
-                    for array in surroundings:
-                        if array[2] == [WALL_VALUE]:
-                            count_walls = count_walls + 1
-                    if count_walls < 3:
-                        self.setCellValue(current_cell[0],current_cell[1], [WALL_VALUE])
-            self.countEntrances()
-            
+                    if [ii,jj] not in outer_space_indices:
+                        outer_space_indices.append([ii,jj])
+            return outer_space_indices
+        
+        def getInnerSpaceIndices(self):
+            inner_layer_spaces = []
+            for ii in [2,3,4,5]:
+                for jj in range(0,7):
+                    inner_layer_spaces.append([ii,jj])
+            for jj in [2,3,4,5]:
+                for ii in range(0,7):
+                    if [ii,jj] not in inner_layer_spaces:
+                        inner_layer_spaces.append([ii,jj])
+            return inner_layer_spaces
+        
 
     def skills_set(self):
         skills_set = set()
@@ -300,21 +339,92 @@ class DataFortress():
         outString = ""
         for ii in board:
             for jj in board[ii]:
-                outString += "|%s|" % (' ' if len(board[ii][jj]) == 0 else WALL_VALUE)
+                outString += "|%s|" % (BLANK_VALUE if len(board[ii][jj]) == 0 else ' : '.join(board[ii][jj]))
             outString += "\n"
         print(outString)
             
+    def placeCPUsAndMemory(self):
+        #Allow placement on any cell but outermost layer
+        valid_cell_indices  = []
+        for ii in range(1,self.fortress.GRID_MAX-1):
+            for jj in range(1,self.fortress.GRID_MAX-1):
+                valid_cell_indices.append([ii,jj])
+        cpus_placed = 0
+        memory_placed = 0
+        while cpus_placed < self.CPUs:
+            cpu_cell = valid_cell_indices[random.randint(0,len(valid_cell_indices)-1)]
+            if self.fortress.isEmpty(cpu_cell):
+                current_cells = [cpu_cell]
+                memory_cells = []
+                while len(memory_cells) < 4:
+                    memory_cell = valid_cell_indices[random.randint(0,len(valid_cell_indices)-1)]
+                    has_component_neighbor = False
+                    for component in current_cells:
+                        if self.fortress.isNeighbor(memory_cell,component):
+                            has_component_neighbor = True
+                            break
+                    if (
+                        memory_cell not in current_cells and 
+                        memory_cell in valid_cell_indices and
+                        self.fortress.isEmpty(memory_cell) and
+                        has_component_neighbor
+                        ):
+                        memory_cells.append(memory_cell)
+                        current_cells.append(memory_cell)
+                for cell in memory_cells:
+                    cell_value = "M%s" % "{:02d}".format(memory_placed)
+                    self.fortress.setCellValue(cell[0], cell[1],[cell_value])
+                    memory_placed += 1
+                cell_value = "C%s" % "{:02d}".format(cpus_placed)
+                self.fortress.setCellValue(cpu_cell[0], cpu_cell[1],[cell_value])
+                cpus_placed += 1
+        self.printBoard(self.fortress.board)
+                
 
+    #TODO: Rewrite this to work with new CPU Placement
+    def addWalls(self):
+            #Start with a random space in the outer 2 layers = []
+            inner_layer_spaces = self.fortress.getInnerSpaceIndices()          
+
+            #Place Outer walls
+            fail_count = 0
+            more_walls = True
+            self.fortress.setEntranceMax()
+            while self.fortress.countEntrances() > self.fortress.ENTRANCE_MAX:
+                unchecked_outer_layer_spaces = self.getOuterSpaceIndices()
+                cell_index = random.randint(0,len(unchecked_outer_layer_spaces)-1)
+                current_cell = unchecked_outer_layer_spaces[cell_index]
+                unchecked_outer_layer_spaces.remove(current_cell)
+                #If the cell is unused
+                if self.isEmpty(current_cell):
+                    #Count the surrounding walls
+                    surroundings = self.getSurrounding(current_cell[0],current_cell[1])
+                    count_walls = 0
+                    for array in surroundings:
+                        if array[2] == [WALL_VALUE]:
+                            count_walls = count_walls + 1
+                    if count_walls < 4:
+                        self.setCellValue(current_cell[0],current_cell[1], [WALL_VALUE])
+                        
+            #Place Inner Walls
+            unchecked_inner_layer_spaces = inner_layer_spaces
+            for ii in range(0,self.fortress.INNER_WALL_MAX):
+                cell_index = random.randint(0,len(unchecked_inner_layer_spaces)-1)
+                current_cell = unchecked_inner_layer_spaces[cell_index]
+                unchecked_inner_layer_spaces.remove(current_cell)
+                self.setCellValue(current_cell[0],current_cell[1], [WALL_VALUE])
 
     def __init__(self):
         WALL_VALUE = 'x'
-        self.printBoard(self.FortressBoard().board)
+        self.fortress = self.FortressBoard()
+        #self.printBoard()
 
         #Step #1: CPU info (p164)
         self.CPUs = roll(6)
         self.memory = {}
         for memory_slot in range(4*self.CPUs):
             self.memory[memory_slot] = []
+        self.placeCPUsAndMemory()
         self.code_gates = self.CPUs
         self.terminal = self.CPUs
         self.intelligence = 3*self.CPUs 
@@ -322,6 +432,7 @@ class DataFortress():
         self.reaction = ""
         self.ICON = ""
 
+        self.addWalls()
 
         self.ALL_SKILLS = ["Accounting", "Anthropology", "Botany", "Chemistry", "Composition", "Cryotank Operation",
                        "Diagnose Illness", "Driving", "Education & General Knowledge", "Gamble", "Geology",
@@ -332,6 +443,7 @@ class DataFortress():
         
         #Step #2: Wall Strength (p164)
         self.wall_strength = roll(6) + round(self.CPUs/2.0)
+        self.fortress.board_legend[WALL_VALUE] = "A Data Wall (Strength=%s)" %self.wall_strength
 
         #Step #3: Code Gate Strength (p164)
         self.code_gate_strength = roll(6) + round(self.CPUs/2.0)
@@ -352,6 +464,12 @@ class DataFortress():
         if roll(3) == 3:
             self.virtuals.append(self.getVirtual())
         
+        #Step#7
+        self.defenses = []
+        for ii in range(roll(6)+self.CPUs):
+            self.defenses.append(self.getDefense())
+
+        #Step #8 Remotes
         self.remotes = []
         for ii in range(roll(6)):
             self.remotes.append(self.getRemote())
