@@ -1,5 +1,9 @@
 import random
 import math
+import tkinter as tk
+from tkinter import *
+from tkinter import ttk
+import copy
 
 WALL_VALUE = '---'
 BLANK_VALUE = '   '
@@ -65,6 +69,34 @@ class DataFortress():
 
         def setCellValue(self, ii,jj, value_array):
             self.board[ii][jj] = value_array
+
+    def createUI(self):
+        # Top level window 
+        frame = tk.Tk() 
+        frame.title("Data Fortress Parameters") 
+        frame.geometry('400x200')
+        self.cputext_output = "" 
+        # Function for getting Input 
+        # from textbox and printing it  
+        # at label widget 
+
+
+        # TextBox Creation 
+        cputext = tk.Text(frame, 
+                        height = 5, 
+                        width = 20) 
+        
+        cputext.pack()
+
+        def submit_text():
+            self.cputext_output = copy.copy(cputext.get(0.0, "end-1c"))
+            frame.destroy()
+
+        button = tk.Button(frame, text="Submit", command=submit_text)
+        button.pack()
+        
+        # Label Creation 
+        frame.mainloop()
 
     def setEntranceMax(self):
         self.ENTRANCE_MAX = 0
@@ -462,14 +494,13 @@ class DataFortress():
                 self.fortress.setCellValue(entrance_cell[0], entrance_cell[1], ["%s%s" % (CODE_GATE_VALUE,"{:02d}".format(entrance_count))])
                 entrance_count+=1       
 
-
-    #TODO: Rewrite this to work with new CPU Placement
     def addWalls(self):
         perimiter = self.getBoundingBoxPerimiter()
         #Walk along the perimiter
         offset = 0
         walls = []
         for bound_cell in perimiter:
+            self.fortress.setCellValue(bound_cell[0], bound_cell[1], ["PPP"])
             if self.fortress.isEmpty(bound_cell):
                 #30% chance to shift the offset in/out by 1
                 if roll(10) > 7:
@@ -541,13 +572,16 @@ class DataFortress():
 
         self.printBoard(self.fortress.board)
     def __init__(self):
+        ui_input = self.createUI()
+
+        print("output:" + self.cputext_output)
         WALL_VALUE = 'x'
         self.setEntranceMax()
         self.fortress = self.FortressBoard()
         #self.printBoard()
 
         #Step #1: CPU info (p164)
-        self.CPUs = roll(6)
+        self.CPUs = int(self.cputext_output)
         self.memory = {}
         for memory_slot in range(4*self.CPUs):
             self.memory[memory_slot] = []
