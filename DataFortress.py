@@ -458,8 +458,8 @@ class DataFortress():
     def getBoundingBoxPerimiter(self):
         perimiter = []
         #Add top points. Don't add corners
-        col_range = range(self.left_col+1, self.right_col)
-        row_range = range(self.top_row+1, self.bottom_row)
+        col_range = range(self.left_col, self.right_col+1)
+        row_range = range(self.top_row, self.bottom_row+1)
         for ii in col_range:
             perimiter.append([self.top_row, ii])
         for ii in row_range:
@@ -468,7 +468,11 @@ class DataFortress():
             perimiter.append([self.bottom_row, ii])
         for ii in reversed(row_range):
             perimiter.append([ii, self.left_col])
-        return perimiter
+        temp=[]
+        for item in perimiter:
+            if item not in temp:
+                temp.append(item)
+        return temp
 
     def isOnBoundingBox(self,coordinates):
         '''Checks if coordinates are on the perimiter of the bounding box. Used for entrance creation.'''
@@ -492,7 +496,8 @@ class DataFortress():
             entrance_cell = perimiter[random.randint(0,len(perimiter)-1)]
             if self.fortress.isEmpty(entrance_cell):
                 self.fortress.setCellValue(entrance_cell[0], entrance_cell[1], ["%s%s" % (CODE_GATE_VALUE,"{:02d}".format(entrance_count))])
-                entrance_count+=1       
+                entrance_count+=1
+
 
     def addWalls(self):
         perimiter = self.getBoundingBoxPerimiter()
@@ -500,8 +505,11 @@ class DataFortress():
         offset = 0
         walls = []
         for bound_cell in perimiter:
-            self.fortress.setCellValue(bound_cell[0], bound_cell[1], ["PPP"])
-            if self.fortress.isEmpty(bound_cell):
+            #self.fortress.setCellValue(bound_cell[0], bound_cell[1], ["PPP"])
+            #If we're a corner...
+            if (bound_cell[0] == self.left_col or bound_cell[0] == self.right_col) and (bound_cell[1] == self.top_row or bound_cell[1] == self.bottom_row):
+                self.fortress.setCellValue(bound_cell[0], bound_cell[1], [WALL_VALUE])
+            elif self.fortress.isEmpty(bound_cell):
                 #30% chance to shift the offset in/out by 1
                 if roll(10) > 7:
                     if offset == 0:
