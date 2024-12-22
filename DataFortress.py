@@ -1,9 +1,6 @@
 import random
 import math
-import tkinter as tk
-from tkinter import *
-from tkinter import ttk
-import copy
+from ImageDrawer import ImageDrawer
 
 WALL_VALUE = '---'
 BLANK_VALUE = '   '
@@ -69,6 +66,13 @@ class DataFortress():
 
         def setCellValue(self, ii,jj, value_array):
             self.board[ii][jj] = value_array
+    
+    def getBoardValues(self, board):
+        val_map = {}
+        for ii in board:
+            for jj in board[ii]:
+                val_map[(ii,jj)] = 'b' if len(board[ii][jj]) == 0 else board[ii][jj]
+        return val_map
 
     def createUI(self):
         # Top level window 
@@ -646,4 +650,7 @@ class DataFortress():
         for ii in range(roll(6)):
             self.remotes.append(self.getRemote())
 
-newFort = DataFortress()                                                                                                                                              
+        boardVals = self.getBoardValues(self.fortress.board)
+        drawer = ImageDrawer(boardVals)
+
+newFort = DataFortress()                                                                                                                                                
