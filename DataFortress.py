@@ -1,6 +1,8 @@
 import random
 import math
 from ImageDrawer import ImageDrawer
+import tkinter as tk
+from tkinter import *
 
 WALL_VALUE = '---'
 BLANK_VALUE = '   '
@@ -74,6 +76,7 @@ class DataFortress():
                 val_map[(ii,jj)] = 'b' if len(board[ii][jj]) == 0 else board[ii][jj]
         return val_map
 
+
     def createUI(self):
         # Top level window 
         frame = tk.Tk() 
@@ -93,7 +96,7 @@ class DataFortress():
         cputext.pack()
 
         def submit_text():
-            self.cputext_output = copy.copy(cputext.get(0.0, "end-1c"))
+            self.cputext_output = cputext.get(0.0, "end-1c")
             frame.destroy()
 
         button = tk.Button(frame, text="Submit", command=submit_text)
@@ -206,7 +209,7 @@ class DataFortress():
         return inner_layer_spaces
         
 
-    def skills_set(self):
+    def getSkillSet(self):
         skills_set = set()
         for skill in self.ALL_SKILLS:
             skills_set.add(skill)
@@ -214,31 +217,43 @@ class DataFortress():
     
     def getVirtual(self):
         virtual = []
+        memory_cost = 0
         value1 = roll(6)
         value2 = roll(6)
         if value1 == 1:
             virtual.append("Virtual Conference")
+            memory_cost = 1
         elif value1 == 2:
             virtual.append("Virtual Office")
+            memory_cost = 2
         elif value1 == 3:
             virtual.append("Virtual Rec-Area")
+            memory_cost = 4
         elif value1 == 4:
             virtual.append("Virtual Building")
+            memory_cost = 8
         elif value1 == 5:
             virtual.append("Virtual City")
+            memory_cost = 16
         elif value1 == 6:
             virtual.append("Virtual World")
+            memory_cost = 32
 
         if value2 == 1 or value2 == 2:
             virtual.append("Simple")
         elif value2 == 3:
             virtual.append("Contextual")
+            memory_cost *=2
         elif value2 == 4:
             virtual.append("Fractal")
+            memory_cost *=3
         elif value2 == 5:
             virtual.append("Photorealistic")
+            memory_cost *=4
         elif value2 == 6:
             virtual.append("Superrealistic")
+            memory_cost *=5
+        return virtual.append(memory_cost)
         
     def getFile(self):
         value = roll(6)
@@ -300,52 +315,71 @@ class DataFortress():
     def getDefense(self):
         type = roll(10)
         subtype = roll(6)
+        memory_cost = 0
         if type in [1,2,3,4]:
             type = "Detection/Alarm"
             if subtype in [1,2]:
                 subtype = "Watchdog"
+                memory_cost = 5
             elif subtype in [3,4]:
                 subtype = "Bloodhound"
+                memory_cost = 5
             elif subtype in [5,6]:
                 subtype = "Pitbull"
+                memory_cost = 6
         elif type in [5,6]:
             type = "Anti-IC"
             if subtype in [1,2]:
                 subtype = "Killer (str=%s)" % str(roll(6))
+                memory_cost = 5
             elif subtype in [3,4]:
                 subtype = "Manticore"
+                memory_cost = 3
             elif subtype in [5,6]:
                 subtype = "Aardvark"
+                memory_cost = 3
         elif type in [7,8]:
             type = "Anti-System"
             if subtype == 1:
                 subtype = "Flatline"
+                memory_cost = 2
             elif subtype == 2:
                 subtype = "Poison Flatline"
+                memory_cost = 2
             elif subtype == 3:
                 subtype = "Krash"
+                memory_cost = 2
             elif subtype == 4:
                 subtype = "Viral 15"
+                memory_cost = 2
             elif subtype == 5:
                 subtype = "DecKrash"
+                memory_cost = 2
             elif subtype == 6:
                 subtype = "Murphy"
+                memory_cost = 2
         elif type in [9,10]:
             type = "Anti-Personnel"
             if subtype == 1:
                 subtype = "Stun"
+                memory_cost = 3
             elif subtype == 2:
                 subtype = "Hellbolt"
+                memory_cost = 4
             elif subtype == 3:
                 subtype = "Brainwipe"
+                memory_cost = 4
             elif subtype == 4:
                 subtype = "Knockout"
+                memory_cost = 3
             elif subtype == 5:
                 subtype = "Zombie"
+                memory_cost = 4
             elif subtype == 6:
                 subtype = "Hellhound"
+                memory_cost = 6
 
-            return [type, subtype]
+        return [type, subtype, memory_cost]
         
     def getRemote(self):
         type = roll(10)
@@ -369,7 +403,6 @@ class DataFortress():
             type = "Elevator"
         elif type == 10:
             type = "Manipulator or Autofactory"
-
 
     
     def printBoard(self, board):
@@ -453,6 +486,7 @@ class DataFortress():
                     if current_col > right_col:
                         right_col = current_col
 
+
         #Set the bounding coordinates with a buffer of 2 (if possible)
         self.top_row = max(0,top_row - 2)
         self.bottom_row = min(self.fortress.GRID_MAX,bottom_row + 2)
@@ -462,8 +496,8 @@ class DataFortress():
     def getBoundingBoxPerimiter(self):
         perimiter = []
         #Add top points. Don't add corners
-        col_range = range(self.left_col, self.right_col+1)
-        row_range = range(self.top_row, self.bottom_row+1)
+        col_range = range(self.left_col, self.right_col)
+        row_range = range(self.top_row, self.bottom_row)
         for ii in col_range:
             perimiter.append([self.top_row, ii])
         for ii in row_range:
@@ -502,6 +536,41 @@ class DataFortress():
                 self.fortress.setCellValue(entrance_cell[0], entrance_cell[1], ["%s%s" % (CODE_GATE_VALUE,"{:02d}".format(entrance_count))])
                 entrance_count+=1
 
+    def setMemoryUnits(self):
+        #Set memory contents
+        remaining_memory = len(self.memory.keys()) * 10
+        all_memories = []
+        #Do files first. Two per memory.
+        for ii in range(2*len(self.memory.keys())):
+            file = self.getFile()
+            all_memories.append(file)
+            remaining_memory -= 1
+
+        #Defenses
+        for ii in range(roll(6)+self.CPUs):
+            defense = self.getDefense()
+            all_memories.append(defense[0] + " " + defense[1])
+            remaining_memory -= defense[2]
+
+        #Finally, do virtuals if there is room. This is out of order of the book, but makes more sense.
+        if roll(3) == 3:
+            memory_allowed = False
+            while not memory_allowed:
+                virtual = self.getVirtual()
+                if remaining_memory - int(virtual[2]) > 0:
+                    all_memories.append(virtual[0] + " " + virtual[1])
+                    memory_allowed = True
+                    remaining_memory -= int(virtual[2])
+        
+        #TODO: Make this distribute based on available memory, not just randomly
+        random.shuffle(all_memories)
+        while len(all_memories) > 0:
+            item = all_memories.pop()
+            while item is not None:
+                self.memory[roll(len(self.memory.keys()))-1]["contents"].append(item)
+                item = None
+        
+        
 
     def addWalls(self):
         perimiter = self.getBoundingBoxPerimiter()
@@ -511,8 +580,8 @@ class DataFortress():
         for bound_cell in perimiter:
             #self.fortress.setCellValue(bound_cell[0], bound_cell[1], ["PPP"])
             #If we're a corner...
-            if (bound_cell[0] == self.left_col or bound_cell[0] == self.right_col) and (bound_cell[1] == self.top_row or bound_cell[1] == self.bottom_row):
-                self.fortress.setCellValue(bound_cell[0], bound_cell[1], [WALL_VALUE])
+            if (bound_cell[0] == self.left_col-1 or bound_cell[0] == self.right_col+1) and (bound_cell[1] == self.top_row+1 or bound_cell[1] == self.bottom_row-1):
+                self.fortress.setCellValue(bound_cell[0], bound_cell[1], ['CCC'])
             elif self.fortress.isEmpty(bound_cell):
                 #30% chance to shift the offset in/out by 1
                 if roll(10) > 7:
@@ -596,7 +665,7 @@ class DataFortress():
         self.CPUs = int(self.cputext_output)
         self.memory = {}
         for memory_slot in range(4*self.CPUs):
-            self.memory[memory_slot] = []
+            self.memory[memory_slot] = {"units_free" : 10, "contents" : []}
         self.placeCPUsAndMemory()
         self.code_gates = self.CPUs
         self.terminal = self.CPUs
@@ -630,10 +699,7 @@ class DataFortress():
             self.skills[self.ALL_SKILLS[index]] = roll(6)+4
 
         #Step #5: Types of files (p164)
-        for ii in range(2*len(self.memory.keys())):
-            file = self.getFile()
-            memory_unit = random.randint(0,len(self.memory.keys())-1)
-            self.memory[memory_unit].append(file)
+        self.setMemoryUnits()
         
         #Step #6 Virtuals (p164)
         self.virtuals = []
@@ -651,6 +717,7 @@ class DataFortress():
             self.remotes.append(self.getRemote())
 
         boardVals = self.getBoardValues(self.fortress.board)
+        print(self.memory)
         drawer = ImageDrawer(boardVals)
 
 newFort = DataFortress()                                                                                                                                                
