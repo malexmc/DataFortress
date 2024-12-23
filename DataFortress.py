@@ -197,6 +197,17 @@ class DataFortress():
                     outer_space_indices.append([ii,jj])
         return outer_space_indices
     
+    #TODO: Write this. After walls are placed, add defenses and peripherals
+    def getEmptyInnerSpaces(self):
+        pass
+    #TODO: roll to see what peripherals there are. Store and print somewhere. Add coloring to map drawer, too
+    def setPeripherals(self):
+        pass
+
+    #TODO: user getEmptyInnerSpaces() to find eligible spots. Place all the extra stuff.
+    def placeDefensesAndPeripherals(self):
+        pass
+
     def getInnerSpaceIndices(self):
         inner_layer_spaces = []
         for ii in [2,3,4,5]:
