@@ -87,28 +87,82 @@ class DataFortress():
         # Top level window 
         frame = tk.Tk() 
         frame.title("Data Fortress Parameters") 
-        frame.geometry('400x200')
+        frame.geometry('600x400')
+        frame.grid_columnconfigure(0, weight=1)
+        frame.grid_columnconfigure(1, weight=5)
+        frame.grid_columnconfigure(2, weight=5)
         self.cputext_output = "" 
+        self.item_field_count = 0
+        self.current_row = 1
+        self.dropdown_options = ["File", "Remote", "Defense"]
+        
+        CPU_item_frame = tk.Frame(frame)
+        CPU_item_frame.grid(row=1)
+
+        memory_item_frame = tk.Frame(frame)
+        memory_item_frame.grid(row=2)
+
+        memory_item_dict = {}
+
+
         # Function for getting Input 
         # from textbox and printing it  
         # at label widget 
 
-
-        # TextBox Creation 
-        cputext = tk.Text(frame, 
-                        height = 5, 
-                        width = 20) 
-        
-        cputext.pack()
-
         def submit_text():
-            self.cputext_output = cputext.get(0.0, "end-1c")
+            self.cputext_output = cputext_field.get(0.0, "end-1c")
             frame.destroy()
 
-        button = tk.Button(frame, text="Submit", command=submit_text)
-        button.pack()
+            memory_frame_rows = memory_item_frame.grid_size()[1]
+            for row in range(1, memory_frame_rows):
+                print(memory_item_frame)
+
+        def add_memory_item_row():
+            self.item_field_count += 1
+
+            memory_label = tk.Label(memory_item_frame,
+                            text="Memory Item " + str(self.item_field_count),
+                            height = 1, 
+                            width = 20)
+            memory_label.grid(row=self.current_row, column=0)
+
+            starting_option = StringVar()
+            starting_option.set("File")
+            memory_type = tk.OptionMenu(memory_item_frame, starting_option, *self.dropdown_options)
+            memory_type.grid(row=self.current_row, column=1)
+            memory_type.configure(width=20)
+
+            memory_name = tk.Text(memory_item_frame,
+                                height = 2,
+                                width = 10)
+            memory_name.grid(row=self.current_row, column=2)
+            memory_name.configure(width=20)
+
+            #TODO: Use this to make the submit button code add relevant items to relevant self.XXX lists
+            memory_item_dict[self.current_row] = [memory_label, memory_type, memory_name]
+
+            self.current_row += 1
+            
+        #Submit button
+        submit_button = tk.Button(frame, text="Submit", command=submit_text)
+        submit_button.grid(row=0, column=0)
+
+        # TextBox Creation 
+        cputext_label = tk.Label(CPU_item_frame,
+                        text="CPU Count",
+                        height = 5, 
+                        width = 20)
+        cputext_label.grid(row=1, column=0)
+
+        cputext_field = tk.Text(CPU_item_frame, 
+                        height = 1, 
+                        width = 20) 
+        cputext_field.grid(row=1, column=1)        
         
-        # Label Creation 
+        add_item_button = tk.Button(memory_item_frame, text="Add Memory Item", command=add_memory_item_row)
+        add_item_button.grid(row=0, column=0)
+
+
         frame.mainloop()
 
     def setEntranceMax(self):
@@ -688,6 +742,7 @@ class DataFortress():
 
         #self.printBoard(self.fortress.board)
     def __init__(self):
+        
         ui_input = self.createUI()
 
         print("output:" + self.cputext_output)
@@ -708,6 +763,8 @@ class DataFortress():
         self.personality = ""
         self.reaction = ""
         self.ICON = ""
+        self.defenses = []
+        self.virtuals = []
 
         self.setBoundingBox()
         self.setEntrances()
@@ -734,8 +791,6 @@ class DataFortress():
             self.skills[self.ALL_SKILLS[index]] = roll(6)+4
 
         #Step #5, #6, #7: Types of files, defenses, and virtuals (p164)
-        self.defenses = []
-        self.virtuals = []
         self.setMemoryUnits()
         
         #Step #6 Virtuals (p164)
