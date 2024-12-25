@@ -6,6 +6,8 @@ from tkinter import *
 
 WALL_VALUE = '---'
 BLANK_VALUE = '   '
+PERIPHERAL_VALUE = "P"
+DEFENSE_VALUE = "D"
 CODE_GATE_VALUE = "G"
 CPU_MAX_DISTANCE = 5
 
@@ -31,12 +33,15 @@ class DataFortress():
             self.board = {}
             self.board_legend = {}
             self.GRID_MAX = 19 #playing on an 8x8 board
+            self.board_readout = {}
             #Make blank board of 8x8
             for ii in range (self.GRID_MAX+1):
                 row = {}
                 for jj in range(self.GRID_MAX+1):
                     row[jj] = []
                 self.board[ii] = row
+
+
 
         def getAllIndices(self):
             indices = []
@@ -77,6 +82,7 @@ class DataFortress():
         return val_map
 
 
+    #TODO: parameterize specific file, remote, defense additions
     def createUI(self):
         # Top level window 
         frame = tk.Tk() 
@@ -197,16 +203,40 @@ class DataFortress():
                     outer_space_indices.append([ii,jj])
         return outer_space_indices
     
-    #TODO: Write this. After walls are placed, add defenses and peripherals
     def getEmptyInnerSpaces(self):
-        pass
-    #TODO: roll to see what peripherals there are. Store and print somewhere. Add coloring to map drawer, too
-    def setPeripherals(self):
-        pass
+        '''Checks if coordinates are inside the bounding box. On the edges are excluded (see isOnBoundingBox()).
+        Used to add remotes once the box is set.'''
+        valid_cells = []
+        #Add top points. Don't add corners
+        for ii in range(self.top_row+1, self.bottom_row-1):
+            for jj in range(self.left_col+1, self.right_col-1):
+                if self.fortress.isEmpty([ii,jj]):
+                    valid_cells.append([ii,jj])
+        return valid_cells
 
-    #TODO: user getEmptyInnerSpaces() to find eligible spots. Place all the extra stuff.
-    def placeDefensesAndPeripherals(self):
-        pass
+    def setRemotes(self):
+        for ii in range(roll(6)):
+            self.remotes.append(self.getRemote())
+
+    def placeDefensesAndRemotes(self):
+        valid_spaces = self.getEmptyInnerSpaces()
+        random.shuffle(valid_spaces)
+        placeables = []
+        number_placed = 0
+        for defense in self.defenses:
+            
+            cell_value = "D%s" % "{:02d}".format(number_placed)
+            current_cell = valid_spaces.pop()
+            self.fortress.setCellValue(current_cell[0], current_cell[1], [cell_value])
+            self.fortress.board_readout[cell_value] = defense
+            number_placed += 1
+        number_placed = 0
+        for remote in self.remotes:
+            cell_value = "R%s" % "{:02d}".format(number_placed)
+            current_cell = valid_spaces.pop()
+            self.fortress.setCellValue(current_cell[0], current_cell[1], [cell_value])
+            self.fortress.board_readout[cell_value] = remote
+            number_placed += 1
 
     def getInnerSpaceIndices(self):
         inner_layer_spaces = []
@@ -264,7 +294,8 @@ class DataFortress():
         elif value2 == 6:
             virtual.append("Superrealistic")
             memory_cost *=5
-        return virtual.append(memory_cost)
+        virtual.append(memory_cost)
+        return virtual
         
     def getFile(self):
         value = roll(6)
@@ -414,13 +445,14 @@ class DataFortress():
             type = "Elevator"
         elif type == 10:
             type = "Manipulator or Autofactory"
+        return type
 
     
     def printBoard(self, board):
         outString = ""
         for ii in board:
             for jj in board[ii]:
-                outString += "|%s|" % (BLANK_VALUE if len(board[ii][jj]) == 0 else ' : '.join(board[ii][jj]))
+                outString += "|%s|" % (BLANK_VALUE if len(board[ii][jj]) == 0 else ''.join(board[ii][jj]))
             outString += "\n\n"
         print(outString)
             
@@ -527,16 +559,6 @@ class DataFortress():
         '''Checks if coordinates are on the perimiter of the bounding box. Used for entrance creation.'''
         perimiter = self.getBoundingBoxPerimiter()
         return coordinates in perimiter
-    
-    def isInBoundingBox(self, coordinates):
-        '''Checks if coordinates are inside the bounding box. On the edges are excluded (see isOnBoundingBox()).
-        Used to add peripherals once the box is set.'''
-        valid_cells = []
-        #Add top points. Don't add corners
-        for ii in range(self.top_row+1, self.bottom_row):
-            for jj in range(self.left_col+1, self.right_col):
-                valid_cells.append([ii,jj])
-        return coordinates in valid_cells
 
     def setEntrances(self):
         perimiter = self.getBoundingBoxPerimiter()
@@ -561,6 +583,7 @@ class DataFortress():
         for ii in range(roll(6)+self.CPUs):
             defense = self.getDefense()
             all_memories.append(defense[0] + " " + defense[1])
+            self.defenses.append(defense[0] + " " + defense[1])
             remaining_memory -= defense[2]
 
         #Finally, do virtuals if there is room. This is out of order of the book, but makes more sense.
@@ -571,6 +594,7 @@ class DataFortress():
                 if remaining_memory - int(virtual[2]) > 0:
                     all_memories.append(virtual[0] + " " + virtual[1])
                     memory_allowed = True
+                    self.virtuals.append(virtual[0] + " " + virtual[1])
                     remaining_memory -= int(virtual[2])
         
         #TODO: Make this distribute based on available memory, not just randomly
@@ -662,7 +686,7 @@ class DataFortress():
             else:
                 last_wall = wall
 
-        self.printBoard(self.fortress.board)
+        #self.printBoard(self.fortress.board)
     def __init__(self):
         ui_input = self.createUI()
 
@@ -709,26 +733,37 @@ class DataFortress():
             index = random.randint(0,len(self.ALL_SKILLS)-1)
             self.skills[self.ALL_SKILLS[index]] = roll(6)+4
 
-        #Step #5: Types of files (p164)
+        #Step #5, #6, #7: Types of files, defenses, and virtuals (p164)
+        self.defenses = []
+        self.virtuals = []
         self.setMemoryUnits()
         
         #Step #6 Virtuals (p164)
-        self.virtuals = []
-        if roll(3) == 3:
-            self.virtuals.append(self.getVirtual())
+        # self.virtuals = []
+        # if roll(3) == 3:
+        #     self.virtuals.append(self.getVirtual())
         
-        #Step#7
-        self.defenses = []
-        for ii in range(roll(6)+self.CPUs):
-            self.defenses.append(self.getDefense())
+        #Step#7 defenses (already handled in setting memory units)
+        # for ii in range(roll(6)+self.CPUs):
+        #     self.defenses.append(self.getDefense())
 
         #Step #8 Remotes
         self.remotes = []
         for ii in range(roll(6)):
             self.remotes.append(self.getRemote())
+    
+        self.placeDefensesAndRemotes()
 
         boardVals = self.getBoardValues(self.fortress.board)
-        print(self.memory)
+        with open("C:\\Users\\malex\\Documents\\GitHub\\DataFortress\\fortress_readout.txt", 'w') as outfile:
+            for slot in self.memory.keys():
+                outfile.write("%s : %s\n" % ("M"+str(slot), self.memory[slot]["contents"]))
+            for item in self.fortress.board_readout.keys():
+                if "D" in item:
+                    outfile.write("%s : %s\n" % (item, self.fortress.board_readout[item]))
+                if "R" in item:
+                    outfile.write("%s : %s\n" % (item, self.fortress.board_readout[item]))
+        self.printBoard(self.fortress.board)
         drawer = ImageDrawer(boardVals)
 
 newFort = DataFortress()                                                                                                                                                

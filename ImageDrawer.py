@@ -19,7 +19,7 @@ class ImageDrawer():
         #draw.line()
 
     def __init__(self, board_map):
-        image_location = 'C:\\Users\\malex\Documents\\GitHub\\DataFortress\\fortress_overlay.png'
+        image_location = 'C:\\Users\\malex\\Documents\\GitHub\\DataFortress\\fortress_overlay.png'
         Image.new('RGBA', (2000, 2000), color = (255,255,255,0)).save(image_location)
         with Image.open(image_location) as im:
             for point_key in board_map.keys():
@@ -30,9 +30,13 @@ class ImageDrawer():
                 if "G" in board_map[point_key][0]:
                     color = (128,128,1,255)
                 if "C" in board_map[point_key][0]:
-                    color = (225,1,1,255)                    
+                    color = (1,1,128,255)                    
                 if "M" in board_map[point_key][0]:
-                    color = (1,128,1,255)                    
+                    color = (1,128,1,255)
+                if "R" in board_map[point_key][0]:
+                    color = (128,1,128,255)
+                if "D" in board_map[point_key][0]:
+                    color = (225,1,1,255)
                 if board_map[point_key] == 'b':
                     color = (255,255,255,0)
                 self.drawSquare(point_key, (point_key[0] + 1, point_key[1] + 1), color, board_map[point_key][0], im)
