@@ -82,7 +82,6 @@ class DataFortress():
         return val_map
 
 
-    #TODO: parameterize specific file, remote, defense additions
     def createUI(self):
         # Top level window 
         frame = tk.Tk() 
@@ -110,12 +109,21 @@ class DataFortress():
         # at label widget 
 
         def submit_text():
-            self.cputext_output = cputext_field.get(0.0, "end-1c")
-            frame.destroy()
+            self.cputext_output = cputext_field.get(1.0, "end-1c")
 
-            memory_frame_rows = memory_item_frame.grid_size()[1]
-            for row in range(1, memory_frame_rows):
-                print(memory_item_frame)
+            for key in memory_item_dict.keys():
+                memory_item = memory_item_dict[key]
+                type_text = memory_item[1].get()
+                my_text = memory_item[0].cget("text")
+                detail_text = memory_item[2].get(1.0, "end-1c")
+                if  type_text == self.dropdown_options[0]: #File
+                    self.files.append(detail_text)
+                if type_text == self.dropdown_options[1]: #Remote
+                    self.remotes.append(detail_text)
+                if type_text == self.dropdown_options[2]: #Defense
+                    self.defenses.append(detail_text)
+            
+            frame.destroy()
 
         def add_memory_item_row():
             self.item_field_count += 1
@@ -126,9 +134,9 @@ class DataFortress():
                             width = 20)
             memory_label.grid(row=self.current_row, column=0)
 
-            starting_option = StringVar()
-            starting_option.set("File")
-            memory_type = tk.OptionMenu(memory_item_frame, starting_option, *self.dropdown_options)
+            option_selection = StringVar()
+            option_selection.set("File")
+            memory_type = tk.OptionMenu(memory_item_frame, option_selection, *self.dropdown_options)
             memory_type.grid(row=self.current_row, column=1)
             memory_type.configure(width=20)
 
@@ -138,8 +146,7 @@ class DataFortress():
             memory_name.grid(row=self.current_row, column=2)
             memory_name.configure(width=20)
 
-            #TODO: Use this to make the submit button code add relevant items to relevant self.XXX lists
-            memory_item_dict[self.current_row] = [memory_label, memory_type, memory_name]
+            memory_item_dict[self.current_row] = [memory_label, option_selection, memory_name]
 
             self.current_row += 1
             
@@ -628,13 +635,20 @@ class DataFortress():
         remaining_memory = len(self.memory.keys()) * 10
         all_memories = []
         #Do files first. Two per memory.
-        for ii in range(2*len(self.memory.keys())):
+        for file in self.files:
+            all_memories.append(file)
+            remaining_memory -= 1
+        for ii in range((2*len(self.memory.keys()))-len(self.files) ):
             file = self.getFile()
             all_memories.append(file)
+            self.files.append(file)
             remaining_memory -= 1
 
         #Defenses
-        for ii in range(roll(6)+self.CPUs):
+        for defense in self.defenses:
+            all_memories.append(defense)
+            remaining_memory -= 2 #TODO: Make this correct
+        for ii in range(roll(6)+self.CPUs-len(self.defenses)):
             defense = self.getDefense()
             all_memories.append(defense[0] + " " + defense[1])
             self.defenses.append(defense[0] + " " + defense[1])
@@ -742,7 +756,10 @@ class DataFortress():
 
         #self.printBoard(self.fortress.board)
     def __init__(self):
-        
+    
+        self.files = []
+        self.defenses = []
+        self.remotes = []
         ui_input = self.createUI()
 
         print("output:" + self.cputext_output)
@@ -763,7 +780,6 @@ class DataFortress():
         self.personality = ""
         self.reaction = ""
         self.ICON = ""
-        self.defenses = []
         self.virtuals = []
 
         self.setBoundingBox()
@@ -803,8 +819,7 @@ class DataFortress():
         #     self.defenses.append(self.getDefense())
 
         #Step #8 Remotes
-        self.remotes = []
-        for ii in range(roll(6)):
+        for ii in range(roll(6) - len(self.remotes)):
             self.remotes.append(self.getRemote())
     
         self.placeDefensesAndRemotes()
