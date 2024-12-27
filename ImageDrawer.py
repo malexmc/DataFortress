@@ -1,6 +1,11 @@
 import sys
 from PIL import Image, ImageDraw, ImageFont
 import numpy as np
+import os, sys
+
+OUT_DIR = os.path.dirname(os.path.realpath(__file__))
+if getattr(sys, 'frozen', False):
+    OUT_DIR = os.path.dirname(sys.executable)
 
 class ImageDrawer():
 
@@ -19,7 +24,7 @@ class ImageDrawer():
         #draw.line()
 
     def __init__(self, board_map):
-        image_location = 'C:\\Users\\malex\\Documents\\GitHub\\DataFortress\\fortress_overlay.png'
+        image_location = OUT_DIR + '\\fortress_overlay.png'
         Image.new('RGBA', (2000, 2000), color = (255,255,255,0)).save(image_location)
         with Image.open(image_location) as im:
             for point_key in board_map.keys():

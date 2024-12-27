@@ -3,6 +3,7 @@ import math
 from ImageDrawer import ImageDrawer
 import tkinter as tk
 from tkinter import *
+import os, sys
 
 WALL_VALUE = '---'
 BLANK_VALUE = '   '
@@ -10,6 +11,9 @@ PERIPHERAL_VALUE = "P"
 DEFENSE_VALUE = "D"
 CODE_GATE_VALUE = "G"
 CPU_MAX_DISTANCE = 5
+OUT_DIR = os.path.dirname(os.path.realpath(__file__))
+if getattr(sys, 'frozen', False):
+    OUT_DIR = os.path.dirname(sys.executable)
 
 def roll(faces):
     return random.randint(1,faces)
@@ -825,7 +829,7 @@ class DataFortress():
         self.placeDefensesAndRemotes()
 
         boardVals = self.getBoardValues(self.fortress.board)
-        with open("C:\\Users\\malex\\Documents\\GitHub\\DataFortress\\fortress_readout.txt", 'w') as outfile:
+        with open(OUT_DIR + "\\fortress_readout.txt", 'w') as outfile:
             for slot in self.memory.keys():
                 outfile.write("%s : %s\n" % ("M"+str(slot), self.memory[slot]["contents"]))
             for item in self.fortress.board_readout.keys():
@@ -834,6 +838,7 @@ class DataFortress():
                 if "R" in item:
                     outfile.write("%s : %s\n" % (item, self.fortress.board_readout[item]))
         self.printBoard(self.fortress.board)
+        print(OUT_DIR + "\\fortress_readout.txt")
         drawer = ImageDrawer(boardVals)
 
 newFort = DataFortress()                                                                                                                                                
