@@ -5,6 +5,10 @@ import tkinter as tk
 from tkinter import *
 import os, sys
 
+#TODO: Remove defenses from the image printout
+#TODO: Add program strength and description to printout
+#TODO: Add levels to 
+
 WALL_VALUE = '---'
 BLANK_VALUE = '   '
 PERIPHERAL_VALUE = "P"
@@ -176,17 +180,18 @@ class DataFortress():
 
         frame.mainloop()
 
-    def setEntranceMax(self):
-        self.ENTRANCE_MAX = 0
-        result = roll(10)
-        if result in [1]:
-            self.ENTRANCE_MAX = 4
-        elif result in [2,3]:
-            self.ENTRANCE_MAX = 3
-        elif result in [4,5,6,7]:
-            self.ENTRANCE_MAX = 2
-        elif result in [8,9,10]:
-            self.ENTRANCE_MAX = 1
+    # Not sure where this came from, but p155 has number of gates=number of CPUs, so commenting out
+    # def setEntranceMax(self):
+    #     self.ENTRANCE_MAX = 0
+    #     result = roll(10)
+    #     if result in [1]:
+    #         self.ENTRANCE_MAX = 4
+    #     elif result in [2,3]:
+    #         self.ENTRANCE_MAX = 3
+    #     elif result in [4,5,6,7]:
+    #         self.ENTRANCE_MAX = 2
+    #     elif result in [8,9,10]:
+    #         self.ENTRANCE_MAX = 1
 
     def setInnerWallMax(self):
         self.INNER_WALL_MAX = 0
@@ -628,7 +633,7 @@ class DataFortress():
     def setEntrances(self):
         perimiter = self.getBoundingBoxPerimiter()
         entrance_count = 0
-        while entrance_count < self.ENTRANCE_MAX:
+        while entrance_count < self.code_gates:
             entrance_cell = perimiter[random.randint(0,len(perimiter)-1)]
             if self.fortress.isEmpty(entrance_cell):
                 self.fortress.setCellValue(entrance_cell[0], entrance_cell[1], ["%s%s" % (CODE_GATE_VALUE,"{:02d}".format(entrance_count))])
@@ -768,7 +773,7 @@ class DataFortress():
 
         print("output:" + self.cputext_output)
         WALL_VALUE = 'x'
-        self.setEntranceMax()
+        #self.setEntranceMax()
         self.fortress = self.FortressBoard()
         #self.printBoard()
 
