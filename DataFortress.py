@@ -1,13 +1,19 @@
 import random
 import math
+import numpy as np
 from ImageDrawer import ImageDrawer
 import tkinter as tk
 from tkinter import *
 import os, sys
-
-#TODO: Remove defenses from the image printout
-#TODO: Add program strength and description to printout
-#TODO: Add levels to 
+from Utils import *
+import json
+from Remote import *
+from Skill import *
+from Defense import *
+from CPU import *
+from Memory import *
+from DataWall import *
+from CodeGate import *
 
 WALL_VALUE = '---'
 BLANK_VALUE = '   '
@@ -19,93 +25,29 @@ OUT_DIR = os.path.dirname(os.path.realpath(__file__))
 if getattr(sys, 'frozen', False):
     OUT_DIR = os.path.dirname(sys.executable)
 
-def roll(faces):
-    return random.randint(1,faces)
-
-def getRand(count, start, stop):
-    values = []
-    for ii in range(count):
-        number = random.randint(start,stop)
-        if number not in values:
-            values.append(number)
-        else:
-            ii = ii-1
-    return values
-
-
-
 class DataFortress():
-    class FortressBoard():
-
-        def __init__(self, method="traditional"):
-            self.board = {}
-            self.board_legend = {}
-            self.GRID_MAX = 19 #playing on an 8x8 board
-            self.board_readout = {}
-            #Make blank board of 8x8
-            for ii in range (self.GRID_MAX+1):
-                row = {}
-                for jj in range(self.GRID_MAX+1):
-                    row[jj] = []
-                self.board[ii] = row
-
-
-
-        def getAllIndices(self):
-            indices = []
-            for ii in range(0,self.GRID_MAX+1):
-                for jj in range(0,self.GRID_MAX+1):
-                    indices.append([ii,jj])
-            return indices
-
-        def isNeighbor(self, home, neighbor):
-            #Check orthogonal neighbors
-            adjacent = []
-            for ii in range(home[0]-1, home[0]+2):
-                for jj in range(home[1]-1, home[1]+2):
-                    adjacent.append([ii,jj])
-            return neighbor in adjacent
-
-        def getSurrounding(self,row,col):
-            surrounding = []
-            for ii in range(row-1,row+2):
-                for jj in range(col-1,col+2):
-                    if ii >= 0 and ii <= self.GRID_MAX and jj >= 0 and jj <= self.GRID_MAX:
-                        surrounding.append([ii,jj,self.board[ii][jj]])
-                    else:
-                        surrounding.append([ii,jj,[]])
-            return surrounding
-
-        def isEmpty(self,ii_jj_array):
-            return self.board[ii_jj_array[0]][ii_jj_array[1]] == []
-
-        def setCellValue(self, ii,jj, value_array):
-            self.board[ii][jj] = value_array
-    
-    def getBoardValues(self, board):
-        val_map = {}
-        for ii in board:
-            for jj in board[ii]:
-                val_map[(ii,jj)] = 'b' if len(board[ii][jj]) == 0 else board[ii][jj]
-        return val_map
-
-
+   
     def createUI(self):
         # Top level window 
         frame = tk.Tk() 
         frame.title("Data Fortress Parameters") 
-        frame.geometry('600x400')
-        frame.grid_columnconfigure(0, weight=1)
-        frame.grid_columnconfigure(1, weight=5)
-        frame.grid_columnconfigure(2, weight=5)
+        frame.geometry('1200x800')
+        #frame.grid_rowconfigure(0, weight=1)
+        #frame.grid_columnconfigure(0, weight=1)
         self.cputext_output = "" 
         self.item_field_count = 0
         self.current_row = 1
-        self.dropdown_options = ["File", "Remote", "Defense"]
+        self.memory_type_options = ["File", "Remote", "Defense"]
+        self.memory_subtype_options = ["NA"]
+        STARTING_ROW_COUNT = 20
+        STARTING_COL_COUNT = 20
         
+        # Frame for CPU widgets
         CPU_item_frame = tk.Frame(frame)
         CPU_item_frame.grid(row=1)
+        CPU_item_frame.grid(column=1)
 
+        # Frame for Memory Item widgets
         memory_item_frame = tk.Frame(frame)
         memory_item_frame.grid(row=2)
 
@@ -117,19 +59,24 @@ class DataFortress():
         # at label widget 
 
         def submit_text():
-            self.cputext_output = cputext_field.get(1.0, "end-1c")
+            self.cputext_output = int(cputext_field.get(1.0, "end-1c"))
+            self.rowstext_output = int(rowtext_field.get(1.0, "end-1c"))
+            self.colstext_output = int(coltext_field.get(1.0, "end-1c"))
 
             for key in memory_item_dict.keys():
                 memory_item = memory_item_dict[key]
                 type_text = memory_item[1].get()
+                subtype_text = memory_item[2].get()
                 my_text = memory_item[0].cget("text")
-                detail_text = memory_item[2].get(1.0, "end-1c")
-                if  type_text == self.dropdown_options[0]: #File
+                detail_text = memory_item[3].get(1.0, "end-1c")
+                if  type_text == self.memory_type_options[0]: #File
                     self.files.append(detail_text)
-                if type_text == self.dropdown_options[1]: #Remote
-                    self.remotes.append(detail_text)
-                if type_text == self.dropdown_options[2]: #Defense
-                    self.defenses.append(detail_text)
+                if type_text == self.memory_type_options[1]: #Remote
+                    new_remote = Remote(name=subtype_text, subtype=REMOTE_TYPES[subtype_text])
+                    self.remotes.append(new_remote)
+                if type_text == self.memory_type_options[2]: #Defense
+                    new_defense = Defense(subtype_text)
+                    self.defenses.append(new_defense)
             
             frame.destroy()
 
@@ -142,708 +89,326 @@ class DataFortress():
                             width = 20)
             memory_label.grid(row=self.current_row, column=0)
 
-            option_selection = StringVar()
-            option_selection.set("File")
-            memory_type = tk.OptionMenu(memory_item_frame, option_selection, *self.dropdown_options)
+            memory_type_selection = StringVar()
+            memory_type_selection.set("File")
+            memory_type = tk.OptionMenu(memory_item_frame, memory_type_selection, *self.memory_type_options)
             memory_type.grid(row=self.current_row, column=1)
             memory_type.configure(width=20)
+
+            memory_subtype_selection = StringVar()
+            memory_subtype_selection.set("")
+            memory_subtype = tk.OptionMenu(memory_item_frame, memory_subtype_selection, *self.memory_subtype_options)
+            memory_subtype.grid(row=self.current_row, column=2)
+            memory_subtype.configure(width=20)      
+
+            def memory_type_selection_callback(row_number):
+                if memory_type_selection.get() == "File":
+                    self.memory_subtype_options = ["NA"]
+                if memory_type_selection.get() == "Remote":
+                    self.memory_subtype_options = REMOTE_TYPES.list_names()
+                if memory_type_selection.get() == "Defense":
+                    self.memory_subtype_options = DEFENSE_TYPES.list_names()
+                memory_subtype = tk.OptionMenu(memory_item_frame, memory_subtype_selection, *self.memory_subtype_options)
+                memory_subtype.grid(row=row_number, column=2)
+                memory_subtype.configure(width=20)  
+
+            memory_type_selection.trace_add("write", lambda x, y, z, row_number=self.current_row: memory_type_selection_callback(row_number))        
 
             memory_name = tk.Text(memory_item_frame,
                                 height = 2,
                                 width = 10)
-            memory_name.grid(row=self.current_row, column=2)
+            memory_name.grid(row=self.current_row, column=3)
             memory_name.configure(width=20)
 
-            memory_item_dict[self.current_row] = [memory_label, option_selection, memory_name]
+            memory_item_dict[self.current_row] = [memory_label, memory_type_selection, memory_subtype_selection, memory_name]
 
             self.current_row += 1
             
         #Submit button
         submit_button = tk.Button(frame, text="Submit", command=submit_text)
         submit_button.grid(row=0, column=0)
+        CPU_item_frame.columnconfigure(0, weight=1)
 
-        # TextBox Creation 
+        # CPU fields creation
         cputext_label = tk.Label(CPU_item_frame,
-                        text="CPU Count",
+                        text="CPU Count (integer 1-6)",
                         height = 5, 
-                        width = 20)
-        cputext_label.grid(row=1, column=0)
+                        width = 25)
+        cputext_label.grid(row=1, column=0, ipady=1)
 
         cputext_field = tk.Text(CPU_item_frame, 
                         height = 1, 
                         width = 20) 
-        cputext_field.grid(row=1, column=1)        
+        cputext_field.grid(row=1, column=1, ipady=1)
+        
+        # Board size creation
+        rowtext_label = tk.Label(CPU_item_frame,
+                        text="Board Rows Count (integer 10+)",
+                        height = 5, 
+                        width = 25)
+        rowtext_label.grid(row=2, column=0)
+
+        rowtext_field = tk.Text(CPU_item_frame, 
+                        height = 1, 
+                        width = 20)
+        rowtext_field.insert(END, STARTING_ROW_COUNT)
+        rowtext_field.grid(row=2, column=1)
+
+        coltext_label = tk.Label(CPU_item_frame,
+                        text="Board Columns Count (integer 10+)",
+                        height = 5, 
+                        width = 25)
+        coltext_label.grid(row=3, column=0)
+
+        coltext_field = tk.Text(CPU_item_frame, 
+                        height = 1, 
+                        width = 20)
+        coltext_field.insert(END, STARTING_COL_COUNT)
+        coltext_field.grid(row=3, column=1)
         
         add_item_button = tk.Button(memory_item_frame, text="Add Memory Item", command=add_memory_item_row)
         add_item_button.grid(row=0, column=0)
 
 
         frame.mainloop()
-
-    # Not sure where this came from, but p155 has number of gates=number of CPUs, so commenting out
-    # def setEntranceMax(self):
-    #     self.ENTRANCE_MAX = 0
-    #     result = roll(10)
-    #     if result in [1]:
-    #         self.ENTRANCE_MAX = 4
-    #     elif result in [2,3]:
-    #         self.ENTRANCE_MAX = 3
-    #     elif result in [4,5,6,7]:
-    #         self.ENTRANCE_MAX = 2
-    #     elif result in [8,9,10]:
-    #         self.ENTRANCE_MAX = 1
-
-    def setInnerWallMax(self):
-        self.INNER_WALL_MAX = 0
-        result = roll(10)
-        if result in [1]:
-            self.INNER_WALL_MAX = 5
-        elif result in [2,3,4,5]:
-            self.INNER_WALL_MAX = 4
-        elif result in [6,7,8]:
-            self.INNER_WALL_MAX = 3
-        elif result in [9,10]:
-            self.INNER_WALL_MAX = 2            
-
-    def countEntrances(self):
-        '''Draws "lines" from the edge of the board straight towards the middle. If it hits an "inner" tile (the middle 4x4), then it is an entrance'''
-        entrance_count = 0
-        entrances = []
-        #Get valid starting spaces. No Corners.
-        indices = []
-        for col in range(1,self.GRID_MAX):
-            indices.append([0,col])
-            indices.append([self.GRID_MAX,col])
-        for row in range(1,self.GRID_MAX):
-            indices.append([row,0])
-            indices.append([row, self.GRID_MAX])
-
-        for ii,jj in indices:
-            if ii == 0: #coming from the top, so looking to pass through walls on left and right
-                while ii < self.GRID_MAX-1:
-                    if (self.board[ii][jj] == [] and
-                        self.board[ii+1][jj] == [] and
-                        self.board[ii][jj-1] == [WALL_VALUE] and
-                        self.board[ii][jj+1] == [WALL_VALUE]
-                    ):
-                        entrance_count += 1
-                        entrances.append([ii,jj])
-                    ii += 1
-            elif ii == self.GRID_MAX: #coming from the bottom, so looking to pass through walls on left and right
-                while ii > 1:
-                    if (self.board[ii][jj] == [] and
-                        self.board[ii-1][jj] == [] and
-                        self.board[ii][jj-1] == [WALL_VALUE] and
-                        self.board[ii][jj+1] == [WALL_VALUE]
-                    ):
-                        entrance_count += 1
-                        entrances.append([ii,jj])
-                    ii -= 1
-            elif jj == 0: #coming from the bottom, so looking to pass through walls on left and right
-                while jj < self.GRID_MAX-1:
-                    if (self.board[ii][jj] == [] and
-                        self.board[ii][jj+1] == [] and
-                        self.board[ii-1][jj] == [WALL_VALUE] and
-                        self.board[ii+1][jj] == [WALL_VALUE]
-                    ):
-                        entrance_count += 1
-                        entrances.append([ii,jj])
-                    jj += 1
-            elif jj == self.GRID_MAX: #coming from the bottom, so looking to pass through walls on left and right
-                while jj > 1:
-                    if (self.board[ii][jj] == [] and
-                        self.board[ii][jj-1] == [] and
-                        self.board[ii-1][jj] == [WALL_VALUE] and
-                        self.board[ii+1][jj] == [WALL_VALUE]
-                    ):
-                        entrance_count += 1
-                        entrances.append([ii,jj])
-                    jj -= 1
-
-        return entrance_count
-
-    def getOuterSpaceIndices(self):
-        outer_space_indices = []
-        for ii in [0,1,6,7]:
-            for jj in range(0,7):
-                outer_space_indices.append([ii,jj])
-        for jj in [0,1,6,7]:
-            for ii in range(0,7):
-                if [ii,jj] not in outer_space_indices:
-                    outer_space_indices.append([ii,jj])
-        return outer_space_indices
     
-    def getEmptyInnerSpaces(self):
-        '''Checks if coordinates are inside the bounding box. On the edges are excluded (see isOnBoundingBox()).
-        Used to add remotes once the box is set.'''
-        valid_cells = []
-        #Add top points. Don't add corners
-        for ii in range(self.top_row+1, self.bottom_row-1):
-            for jj in range(self.left_col+1, self.right_col-1):
-                if self.fortress.isEmpty([ii,jj]):
-                    valid_cells.append([ii,jj])
-        return valid_cells
+    def writeToJSON(self):
+        with open(OUT_DIR + "\%s.json" % self.name, "w") as outfile:
+            board_json = {}
+            board_json["name"] = self.name
+            board_json["rows"] = int(self.rowstext_output)
+            board_json["columns"] = int(self.colstext_output)
+            board_json["remotes"] = []
+            board_json["skills"] = []
+            board_json["defenses"] = []
+            board_json["datawallStr"] = self.data_wall_strength
+            for ii in range(1, len(self.board)): # all elements will have an addToJSON method, so run them all in a batch
+                for jj in range(1, len(self.board[1])):
+                    current_cell = self.getBoardCell([ii, jj])
+                    if current_cell is not None:
+                        current_cell.addToJSON(board_json)
+            outfile.write(json.dumps(board_json))
+
+    def setBoardCell(self, cell, value):
+        self.board[cell[0]][cell[1]] = value
+
+    def getBoardCell(self, cell):
+        return self.board[cell[0]][cell[1]]
+
+    def makeRemotes(self):
+        for ii in range(roll(6) - len(self.remotes)):
+            self.remotes.append(Remote().rollRandomly())
 
     def setRemotes(self):
-        for ii in range(roll(6)):
-            self.remotes.append(self.getRemote())
-
-    def placeDefensesAndRemotes(self):
-        valid_spaces = self.getEmptyInnerSpaces()
-        random.shuffle(valid_spaces)
-        placeables = []
-        number_placed = 0
-        for defense in self.defenses:
-            
-            cell_value = "D%s" % "{:02d}".format(number_placed)
-            current_cell = valid_spaces.pop()
-            self.fortress.setCellValue(current_cell[0], current_cell[1], [cell_value])
-            self.fortress.board_readout[cell_value] = defense
-            number_placed += 1
-        number_placed = 0
         for remote in self.remotes:
-            cell_value = "R%s" % "{:02d}".format(number_placed)
-            current_cell = valid_spaces.pop()
-            self.fortress.setCellValue(current_cell[0], current_cell[1], [cell_value])
-            self.fortress.board_readout[cell_value] = remote
-            number_placed += 1
+            if remote.coords not in self.inside_coords:
+                remote_placed = False
+                while not remote_placed:
+                    current_cell = random.choice(self.inside_coords)
+                    if self.getBoardCell(current_cell) is None:
+                        remote.coords = current_cell
+                        self.setBoardCell(current_cell, remote)
+                        remote_placed = True
 
-    def getInnerSpaceIndices(self):
-        inner_layer_spaces = []
-        for ii in [2,3,4,5]:
-            for jj in range(0,7):
-                inner_layer_spaces.append([ii,jj])
-        for jj in [2,3,4,5]:
-            for ii in range(0,7):
-                if [ii,jj] not in inner_layer_spaces:
-                    inner_layer_spaces.append([ii,jj])
-        return inner_layer_spaces
-        
+    def makeDefenses(self):
+        for ii in range(roll(6)+self.CPU_count-len(self.defenses)):
+            self.defenses.append(Defense().rollRandomly())
 
-    def getSkillSet(self):
-        skills_set = set()
-        for skill in self.ALL_SKILLS:
-            skills_set.add(skill)
-        return skills_set
-    
-    def getVirtual(self):
-        virtual = []
-        memory_cost = 0
-        value1 = roll(6)
-        value2 = roll(6)
-        if value1 == 1:
-            virtual.append("Virtual Conference")
-            memory_cost = 1
-        elif value1 == 2:
-            virtual.append("Virtual Office")
-            memory_cost = 2
-        elif value1 == 3:
-            virtual.append("Virtual Rec-Area")
-            memory_cost = 4
-        elif value1 == 4:
-            virtual.append("Virtual Building")
-            memory_cost = 8
-        elif value1 == 5:
-            virtual.append("Virtual City")
-            memory_cost = 16
-        elif value1 == 6:
-            virtual.append("Virtual World")
-            memory_cost = 32
+    def setDefenses(self):
+        for defense in self.defenses:
+            if defense.coords not in self.inside_coords:
+                defense_placed = False
+                while not defense_placed:
+                    current_cell = random.choice(self.inside_coords)
+                    if self.getBoardCell(current_cell) is None:
+                        defense.coords = current_cell
+                        self.setBoardCell(current_cell, defense)
+                        defense_placed = True
 
-        if value2 == 1 or value2 == 2:
-            virtual.append("Simple")
-        elif value2 == 3:
-            virtual.append("Contextual")
-            memory_cost *=2
-        elif value2 == 4:
-            virtual.append("Fractal")
-            memory_cost *=3
-        elif value2 == 5:
-            virtual.append("Photorealistic")
-            memory_cost *=4
-        elif value2 == 6:
-            virtual.append("Superrealistic")
-            memory_cost *=5
-        virtual.append(memory_cost)
-        return virtual
-        
-    def getFile(self):
-        value = roll(6)
-        if value == 1:
-            return "Inter Office"
-        elif value == 2:
-            return "Database"
-        elif value == 3:
-            return "Business Records"
-        elif value == 4:
-            return "Financial Transactions"
-        elif value == 5:
-            return "Grey Ops"
-        elif value == 6:
-            return "Black Ops"
-        
-    def setPersonality(self):
-        if self.intelligence >= 12:
-            PERSONALITY_ROLL = roll(6)
-            if PERSONALITY_ROLL == 1:
-                self.personality = "Friendly, curious"
-            elif PERSONALITY_ROLL == 2:
-                self.personality = "Hostile, paranoid"
-            elif PERSONALITY_ROLL == 3:
-                self.personality = "Stable, intelligent, businesslike"
-            elif PERSONALITY_ROLL == 4:
-                self.personality = "Intellectual, detached"
-            elif PERSONALITY_ROLL == 5:
-                self.personality = "Machinelike"
-            elif PERSONALITY_ROLL == 6:
-                self.personality = "Remote and godlike"
+    def setSkills(self):
+       for ii in range(5):
+            self.skills.append(Skill().rollRandomly())
 
-            REACTION_ROLL = roll(6)
-            if REACTION_ROLL == 1 or REACTION_ROLL == 2:
-                self.reaction = "Neutral"
-            elif REACTION_ROLL == 3:
-                self.reaction = "Kill all intruders"
-            elif REACTION_ROLL == 4:
-                self.reaction = "Observe intruders, then act"
-            elif REACTION_ROLL == 5:
-                self.reaction = "Report all intruders"
-            elif REACTION_ROLL == 6:
-                self.reaction = "Talk to intruder to find intent"
+    def setFiles(self):
+        for ii in range((8*self.CPU_count)-len(self.files) ):
+            value = roll(6)
+            if value == 1:
+                self.files.append("Inter Office")
+            elif value == 2:
+                self.files.append("Database")
+            elif value == 3:
+                self.files.append("Business Records")
+            elif value == 4:
+                self.files.append("Financial Transactions")
+            elif value == 5:
+                self.files.append("Grey Ops")
+            elif value == 6:
+                self.files.append("Black Ops")
 
-            ICON_ROLL = roll(6)
-            if ICON_ROLL == 1:
-                self.ICON = "Human"
-            elif ICON_ROLL == 2:
-                self.ICON = "Geometric"
-            elif ICON_ROLL == 3:
-                self.ICON = "Mythological"
-            elif ICON_ROLL == 4:
-                self.ICON = "Voice Only"
-            elif ICON_ROLL == 5:
-                self.ICON = "Technic"
-            elif ICON_ROLL == 6:
-                self.ICON = "Humanoid"
-   
-    def getDefense(self):
-        type = roll(10)
-        subtype = roll(6)
-        memory_cost = 0
-        if type in [1,2,3,4]:
-            type = "Detection/Alarm"
-            if subtype in [1,2]:
-                subtype = "Watchdog"
-                memory_cost = 5
-            elif subtype in [3,4]:
-                subtype = "Bloodhound"
-                memory_cost = 5
-            elif subtype in [5,6]:
-                subtype = "Pitbull"
-                memory_cost = 6
-        elif type in [5,6]:
-            type = "Anti-IC"
-            if subtype in [1,2]:
-                subtype = "Killer (str=%s)" % str(roll(6))
-                memory_cost = 5
-            elif subtype in [3,4]:
-                subtype = "Manticore"
-                memory_cost = 3
-            elif subtype in [5,6]:
-                subtype = "Aardvark"
-                memory_cost = 3
-        elif type in [7,8]:
-            type = "Anti-System"
-            if subtype == 1:
-                subtype = "Flatline"
-                memory_cost = 2
-            elif subtype == 2:
-                subtype = "Poison Flatline"
-                memory_cost = 2
-            elif subtype == 3:
-                subtype = "Krash"
-                memory_cost = 2
-            elif subtype == 4:
-                subtype = "Viral 15"
-                memory_cost = 2
-            elif subtype == 5:
-                subtype = "DecKrash"
-                memory_cost = 2
-            elif subtype == 6:
-                subtype = "Murphy"
-                memory_cost = 2
-        elif type in [9,10]:
-            type = "Anti-Personnel"
-            if subtype == 1:
-                subtype = "Stun"
-                memory_cost = 3
-            elif subtype == 2:
-                subtype = "Hellbolt"
-                memory_cost = 4
-            elif subtype == 3:
-                subtype = "Brainwipe"
-                memory_cost = 4
-            elif subtype == 4:
-                subtype = "Knockout"
-                memory_cost = 3
-            elif subtype == 5:
-                subtype = "Zombie"
-                memory_cost = 4
-            elif subtype == 6:
-                subtype = "Hellhound"
-                memory_cost = 6
+    def setBounds(self):
+        needed_spaces = self.CPU_count*5
+        needed_spaces += len(self.files)
+        needed_spaces += len(self.defenses)
+        needed_spaces += len(self.remotes)
+        needed_spaces += len(self.skills)
+        print("Spaces to accommodate: %s" % str(needed_spaces))
 
-        return [type, subtype, memory_cost]
-        
-    def getRemote(self):
-        type = roll(10)
-        if type == 1:
-            type = "Microphone"
-        elif type == 2:
-            type = "TV Camera"
-        elif type == 3:
-            type = "Extra Terminal"
-        elif type == 4:
-            type = "Videoboard"
-        elif type == 5:
-            type = "Printer"
-        elif type == 6:
-            type = "Alarm"
-        elif type == 7:
-            type = "Remote Vehicle or Robot"
-        elif type == 8:
-            type = "Automatic door, gate"
-        elif type == 9:
-            type = "Elevator"
-        elif type == 10:
-            type = "Manipulator or Autofactory"
-        return type
-
-    
-    def printBoard(self, board):
-        outString = ""
-        for ii in board:
-            for jj in board[ii]:
-                outString += "|%s|" % (BLANK_VALUE if len(board[ii][jj]) == 0 else ''.join(board[ii][jj]))
-            outString += "\n\n"
-        print(outString)
-            
-    def placeCPUsAndMemory(self):
+    def setCPUsAndMemory(self):
+        #TODO Place CPUs around the center
         #Allow placement on any cell but outermost layer
+        INTERNAL_OFFSET = 4
         valid_cell_indices  = []
-        for ii in range(4,self.fortress.GRID_MAX-4):
-            for jj in range(4,self.fortress.GRID_MAX-4):
+        for ii in range(1+INTERNAL_OFFSET,len(self.board)-INTERNAL_OFFSET):
+            for jj in range(1+INTERNAL_OFFSET,len(self.board[1])-INTERNAL_OFFSET):
                 valid_cell_indices.append([ii,jj])
+
         cpus_placed = 0
         cpu_first_spot = []
-        memory_placed = 0
-        while cpus_placed < self.CPUs:
+        while cpus_placed < self.CPU_count:
+        #Allow placement on any cell but outermost layer
             cpu_cell = None
             if cpus_placed > 0:
                 #If we've placed a CPU, make sure others are within CPU_MAX_DISTANCE to aid clustering
                 within_range = False
                 while not within_range:
-                    cpu_cell = valid_cell_indices[random.randint(0,len(valid_cell_indices)-1)]
+                    cpu_cell = random.choice(valid_cell_indices)
                     cpu_distance = abs(cpu_cell[0] - cpu_first_spot[0]) + abs(cpu_cell[1] - cpu_first_spot[1])
                     if cpu_distance <= CPU_MAX_DISTANCE:
                         within_range = True
             else:
-                cpu_cell = valid_cell_indices[random.randint(0,len(valid_cell_indices)-1)]
-            if self.fortress.isEmpty(cpu_cell):
-                current_cells = [cpu_cell]
-                memory_cells = []
-                while len(memory_cells) < 4:
-                    memory_cell = valid_cell_indices[random.randint(0,len(valid_cell_indices)-1)]
-                    has_component_neighbor = False
-                    for component in current_cells:
-                        if self.fortress.isNeighbor(memory_cell,component):
-                            has_component_neighbor = True
-                            break
-                    if (
-                        memory_cell not in current_cells and 
-                        memory_cell in valid_cell_indices and
-                        self.fortress.isEmpty(memory_cell) and
-                        has_component_neighbor
-                        ):
-                        memory_cells.append(memory_cell)
-                        current_cells.append(memory_cell)
-                for cell in memory_cells:
-                    cell_value = "M%s" % "{:02d}".format(memory_placed)
-                    self.fortress.setCellValue(cell[0], cell[1],[cell_value])
-                    memory_placed += 1
-                cell_value = "C%s" % "{:02d}".format(cpus_placed)
-                self.fortress.setCellValue(cpu_cell[0], cpu_cell[1],[cell_value])
-                if cpu_first_spot == []:
-                    cpu_first_spot = cpu_cell
-                cpus_placed += 1
-
-    def setBoundingBox(self):
+                cpu_cell = random.choice(valid_cell_indices)
+            #Place CPUs and Memory
+            if self.getBoardCell(cpu_cell) is None:
+                current_CPU = CPU(name=cpus_placed, coords=cpu_cell)
+                cpu_first_spot = cpu_cell
+                self.CPUs.append(current_CPU)
+                self.setBoardCell(cpu_cell, current_CPU)
+                cpus_placed +=1
+                current_memories = []
+                while len(current_memories) < 4:
+                    all_valid_spots = [memory for memory in current_memories]
+                    all_valid_spots.append(current_CPU)
+                    memory_placed = False
+                    while not memory_placed:
+                        target = random.choice(all_valid_spots)
+                        target_neighbors = getAdjacentDict(target, self)
+                        shuffled_directions = [e for e in target_neighbors.keys()]
+                        random.shuffle(shuffled_directions)
+                        for direction in shuffled_directions:
+                            if target_neighbors[direction]['value'] is None and target_neighbors[direction]['coords'] in valid_cell_indices:
+                                memory = Memory(
+                                                            name=len(current_memories),
+                                                            CPU=current_CPU,
+                                                            coords=target_neighbors[direction]['coords']
+                                                          )
+                                self.memory.append(memory)
+                                self.setBoardCell(memory.coords, memory)
+                                current_memories.append(memory)
+                                memory_placed = True
+                                break
+        #Place all the files into memory
+        for file in self.files:
+            file_placed = False
+            while not file_placed:
+                selected_memory = random.choice(self.memory)
+                if selected_memory.memory_remaining > 0:
+                    if selected_memory.contents is None:
+                        selected_memory.contents = file
+                    else:
+                        selected_memory.contents += ", %s" % file
+                    file_placed = True
+    def setBoundsAndInsideSpaces(self):
         '''Once CPUs and memory are placed, create a "bounding box".
-        Entrances will be placed along the bounding box'''
-        top_row = self.fortress.GRID_MAX
-        bottom_row = 0
-        left_col = self.fortress.GRID_MAX
-        right_col = 0
-        for row in range(self.fortress.GRID_MAX+1):
-            for col in range(self.fortress.GRID_MAX+1):
+        This will represent the outermost inside perimiter before walls can be placed.'''
+        #Make sure the bounds have enough room for everyone. This alrogithm can be improved later
+        bounds_offset = 0
+        inside_space_count = len(self.board) * len(self.board[1])
+        required_space_count = (self.CPU_count*5) + len(self.remotes) + len(self.defenses)
+        while inside_space_count < required_space_count:
+            bounds_offset += 1
+            inside_space_count = (len(self.board)+(2*bounds_offset)) * (len(self.board[1])+(2*bounds_offset))
+
+        #Start these opposite of intended
+        self.top_bound = len(self.board[1])
+        self.bottom_bound = 0
+        self.left_bound = len(self.board)
+        self.right_bound = 0
+        for row in range(1, len(self.board)):
+            for col in range(1, len(self.board[1])):
                 current_cell = [row,col]
-                if self.fortress.board[row][col] == []:
+                if self.getBoardCell(current_cell) == None:
                     continue
                 current_row = current_cell[0]
                 current_col = current_cell[1]
-                if current_cell[0] != []:
-                    if current_row < top_row:
-                        top_row = current_row
-                    if current_row > bottom_row:
-                        bottom_row = current_row
-                    if current_col < left_col:
-                        left_col = current_col
-                    if current_col > right_col:
-                        right_col = current_col
+                if current_row < self.top_bound:
+                    self.top_bound = current_row-bounds_offset
+                if current_row > self.bottom_bound:
+                    self.bottom_bound = current_row+bounds_offset
+                if current_col < self.left_bound:
+                    self.left_bound = current_col-bounds_offset
+                if current_col > self.right_bound:
+                    self.right_bound = current_col+bounds_offset
 
+        self.inside_coords = []
+        for col in range(self.left_bound, self.right_bound):
+            for row in range(self.top_bound, self.bottom_bound):
+                self.inside_coords.append([row,col])
 
-        #Set the bounding coordinates with a buffer of 2 (if possible)
-        self.top_row = max(0,top_row - 2)
-        self.bottom_row = min(self.fortress.GRID_MAX,bottom_row + 2)
-        self.left_col = max(0,left_col - 2)
-        self.right_col = min(self.fortress.GRID_MAX,right_col + 2)
+    def setWallsAndGates(self):
+        '''Place walls around the outside of the bounding box'''
+        wall_box = [] #The "default" cells for all walls
+        for col in range(self.left_bound-2, self.right_bound+2):
+            wall_box.append([self.top_bound-2, col])
+        for row in range(self.top_bound-2, self.bottom_bound+2): #set offset for top at -1 since we placed -2 in the last batch
+            wall_box.append([row, self.right_bound+2])
+        for col in range(self.right_bound+2, self.left_bound-2, -1):
+            wall_box.append([self.bottom_bound+2, col])
+        for row in range(self.bottom_bound+2, self.top_bound-2, -1):
+            wall_box.append([row, self.left_bound-2])
+        banana = "pine"
+        #TODO: Use wall box to go through wall placement algorithm
+        wall_list = []
+        for wall_coords in wall_box:
+            wall = DataWall(str=self.data_wall_strength, coords=wall_coords)
+            self.setBoardCell(wall_coords, wall)
+            wall_list.append(wall)
+        for ii in range(self.CPU_count):
+            wall = random.choice(wall_list)
+            gate_coords = wall.coords
+            gate = CodeGate(cpu_count=self.CPU_count, coords=gate_coords)
+            self.setBoardCell(gate_coords, gate)
+            wall_list.remove(wall)
 
-    def getBoundingBoxPerimiter(self):
-        perimiter = []
-        #Add top points. Don't add corners
-        col_range = range(self.left_col, self.right_col)
-        row_range = range(self.top_row, self.bottom_row)
-        for ii in col_range:
-            perimiter.append([self.top_row, ii])
-        for ii in row_range:
-            perimiter.append([ii, self.right_col])
-        for ii in reversed(col_range):
-            perimiter.append([self.bottom_row, ii])
-        for ii in reversed(row_range):
-            perimiter.append([ii, self.left_col])
-        temp=[]
-        for item in perimiter:
-            if item not in temp:
-                temp.append(item)
-        return temp
-
-    def isOnBoundingBox(self,coordinates):
-        '''Checks if coordinates are on the perimiter of the bounding box. Used for entrance creation.'''
-        perimiter = self.getBoundingBoxPerimiter()
-        return coordinates in perimiter
-
-    def setEntrances(self):
-        perimiter = self.getBoundingBoxPerimiter()
-        entrance_count = 0
-        while entrance_count < self.code_gates:
-            entrance_cell = perimiter[random.randint(0,len(perimiter)-1)]
-            if self.fortress.isEmpty(entrance_cell):
-                self.fortress.setCellValue(entrance_cell[0], entrance_cell[1], ["%s%s" % (CODE_GATE_VALUE,"{:02d}".format(entrance_count))])
-                entrance_count+=1
-
-    def setMemoryUnits(self):
-        #Set memory contents
-        remaining_memory = len(self.memory.keys()) * 10
-        all_memories = []
-        #Do files first. Two per memory.
-        for file in self.files:
-            all_memories.append(file)
-            remaining_memory -= 1
-        for ii in range((2*len(self.memory.keys()))-len(self.files) ):
-            file = self.getFile()
-            all_memories.append(file)
-            self.files.append(file)
-            remaining_memory -= 1
-
-        #Defenses
-        for defense in self.defenses:
-            all_memories.append(defense)
-            remaining_memory -= 2 #TODO: Make this correct
-        for ii in range(roll(6)+self.CPUs-len(self.defenses)):
-            defense = self.getDefense()
-            all_memories.append(defense[0] + " " + defense[1])
-            self.defenses.append(defense[0] + " " + defense[1])
-            remaining_memory -= defense[2]
-
-        #Finally, do virtuals if there is room. This is out of order of the book, but makes more sense.
-        if roll(3) == 3:
-            memory_allowed = False
-            while not memory_allowed:
-                virtual = self.getVirtual()
-                if remaining_memory - int(virtual[2]) > 0:
-                    all_memories.append(virtual[0] + " " + virtual[1])
-                    memory_allowed = True
-                    self.virtuals.append(virtual[0] + " " + virtual[1])
-                    remaining_memory -= int(virtual[2])
         
-        #TODO: Make this distribute based on available memory, not just randomly
-        random.shuffle(all_memories)
-        while len(all_memories) > 0:
-            item = all_memories.pop()
-            while item is not None:
-                self.memory[roll(len(self.memory.keys()))-1]["contents"].append(item)
-                item = None
-        
-        
+                
 
-    def addWalls(self):
-        perimiter = self.getBoundingBoxPerimiter()
-        #Walk along the perimiter
-        offset = 0
-        walls = []
-        for bound_cell in perimiter:
-            #self.fortress.setCellValue(bound_cell[0], bound_cell[1], ["PPP"])
-            #If we're a corner...
-            if (bound_cell[0] == self.left_col-1 or bound_cell[0] == self.right_col+1) and (bound_cell[1] == self.top_row+1 or bound_cell[1] == self.bottom_row-1):
-                self.fortress.setCellValue(bound_cell[0], bound_cell[1], ['CCC'])
-            elif self.fortress.isEmpty(bound_cell):
-                #30% chance to shift the offset in/out by 1
-                if roll(10) > 7:
-                    if offset == 0:
-                        if roll(2) == 1:
-                            offset = -1
-                    else:
-                        offset = 0
-                if bound_cell[0] == self.top_row:
-                    self.fortress.setCellValue(bound_cell[0]+offset, bound_cell[1], [WALL_VALUE])
-                    walls.append([bound_cell[0]+offset, bound_cell[1]])
-                if bound_cell[0] == self.bottom_row:
-                    self.fortress.setCellValue(bound_cell[0]-offset, bound_cell[1], [WALL_VALUE])
-                    walls.append([bound_cell[0]-offset, bound_cell[1]])
-                if bound_cell[1] == self.left_col:
-                    self.fortress.setCellValue(bound_cell[0], bound_cell[1]+offset, [WALL_VALUE])
-                    walls.append([bound_cell[0], bound_cell[1]+offset])
-                if bound_cell[1] == self.right_col:
-                    self.fortress.setCellValue(bound_cell[0], bound_cell[1]-offset, [WALL_VALUE])
-                    walls.append([bound_cell[0], bound_cell[1]-offset])
-            else:
-                walls.append([bound_cell[0], bound_cell[1]])
-        self.printBoard(self.fortress.board)
-        last_wall = walls[-1]
-        temp_wall = []
-        for wall in walls:
-            distance = abs(last_wall[0]-wall[0]) + abs(last_wall[1]-wall[1])
-            if distance > 1:
-                walls_needed = math.ceil(distance/2.0)
-                for ii in range(walls_needed):
-                    if (wall[0] != last_wall[0] and wall[1] != last_wall[1]):
-                        #If we're a gate, we need special conditions to ensure we don't get blocked
-                        if self.fortress.board[wall[0]][wall[1]] != [WALL_VALUE]:
-                            if wall[0] == self.top_row or wall[0] == self.bottom_row:
-                                if last_wall[1] > wall[1]:
-                                    self.fortress.setCellValue(wall[0], wall[1]+1, [WALL_VALUE])
-                                    last_wall = [wall[0], wall[1]+1]
-                                else:
-                                    self.fortress.setCellValue(wall[0], wall[1]-1, [WALL_VALUE])
-                                    last_wall = [wall[0], wall[1]-1]
-                            elif wall[1] == self.left_col or wall[1] == self.right_col:
-                                if last_wall[0] > wall[0]:
-                                    self.fortress.setCellValue(wall[0]+1, wall[1], [WALL_VALUE])
-                                    last_wall = [wall[0]+1, wall[1]]
-                                else:
-                                    self.fortress.setCellValue(wall[0]-1, wall[1], [WALL_VALUE])
-                                    last_wall = [wall[0]-1, wall[1]]
-                            temp_wall = wall
-                            wall = last_wall                        
-                        elif last_wall[0] == self.left_col or last_wall[0] == self.right_col:
-                            if wall[0] > last_wall[0]:
-                                self.fortress.setCellValue(last_wall[0]+1, last_wall[1], [WALL_VALUE])
-                                last_wall = [last_wall[0]+1, last_wall[1]]
-                            elif wall[0] < last_wall[0]:
-                                self.fortress.setCellValue(last_wall[0]-1, last_wall[1], [WALL_VALUE])
-                                last_wall = [last_wall[0]-1, last_wall[1]]
-                        else:
-                            if wall[1] > last_wall[1]:
-                                self.fortress.setCellValue(last_wall[0], last_wall[1]+1, [WALL_VALUE])
-                                last_wall = [last_wall[0], last_wall[1]+1]
-                            elif wall[1] < last_wall[1]:
-                                self.fortress.setCellValue(last_wall[0], last_wall[1]-1, [WALL_VALUE])
-                                last_wall = [last_wall[0], last_wall[1]-1]
-            if temp_wall != []:
-                last_wall = temp_wall
-                temp_wall = []
-            else:
-                last_wall = wall
-
-        #self.printBoard(self.fortress.board)
     def __init__(self):
-    
+        self.name = "ABC"
+        self.board = {}
+        self.CPUs = []
+        self.memory = []
         self.files = []
         self.defenses = []
         self.remotes = []
+        self.skills = []
         ui_input = self.createUI()
 
-        print("output:" + self.cputext_output)
-        WALL_VALUE = 'x'
-        #self.setEntranceMax()
-        self.fortress = self.FortressBoard()
-        #self.printBoard()
+        for ii in range(1, self.rowstext_output+1):
+            self.board[ii] = {}
+            for jj in range(1, self.colstext_output+1):
+                self.board[ii][jj] = None
 
-        #Step #1: CPU info (p164)
-        self.CPUs = int(self.cputext_output)
-        self.memory = {}
-        for memory_slot in range(4*self.CPUs):
-            self.memory[memory_slot] = {"units_free" : 10, "contents" : []}
-        self.placeCPUsAndMemory()
-        self.code_gates = self.CPUs
-        self.terminal = self.CPUs
-        self.intelligence = 3*self.CPUs 
-        self.personality = ""
-        self.reaction = ""
-        self.ICON = ""
-        self.virtuals = []
+        self.CPU_count = int(self.cputext_output)
+        self.data_wall_strength = math.floor(roll(6)/2) + self.CPU_count
+        self.setFiles()
+        self.setCPUsAndMemory()
+        self.makeRemotes()
+        self.setBoundsAndInsideSpaces()
+        self.setWallsAndGates()
+        #self.setDefenses()
+        self.setRemotes()
+        self.setSkills()
 
-        self.setBoundingBox()
-        self.setEntrances()
-        self.addWalls()
-
-        self.ALL_SKILLS = ["Accounting", "Anthropology", "Botany", "Chemistry", "Composition", "Cryotank Operation",
-                       "Diagnose Illness", "Driving", "Education & General Knowledge", "Gamble", "Geology",
-                       "Heavy Weapons (as a mounted weapon)", "History.", "Language", "Library Search", "Mathematics",
-                       "Operate Hvy. Machinery", "Paint or Draw", "Pharmaceuticals", "Physics", "Pilot",
-                       "Play Instrument (if electronic)", "Programming", "Rifle (as a mounted weapon)", "Stock Market",
-                       "Submachinegun (as a mounted weapon)", "System Knowledge", "Teaching", "Zoology"]
-        
-        #Step #2: Wall Strength (p164)
-        self.wall_strength = roll(6) + round(self.CPUs/2.0)
-        self.fortress.board_legend[WALL_VALUE] = "A Data Wall (Strength=%s)" %self.wall_strength
-
-        #Step #3: Code Gate Strength (p164)
-        self.code_gate_strength = roll(6) + round(self.CPUs/2.0)
-
-        #Step #4: 5 Skills (p164, and skill list from p157)
-        self.skills = {}
-        for ii in range(5):
-            index = random.randint(0,len(self.ALL_SKILLS)-1)
-            self.skills[self.ALL_SKILLS[index]] = roll(6)+4
-
-        #Step #5, #6, #7: Types of files, defenses, and virtuals (p164)
-        self.setMemoryUnits()
-        
-        #Step #6 Virtuals (p164)
-        # self.virtuals = []
-        # if roll(3) == 3:
-        #     self.virtuals.append(self.getVirtual())
-        
-        #Step#7 defenses (already handled in setting memory units)
-        # for ii in range(roll(6)+self.CPUs):
-        #     self.defenses.append(self.getDefense())
-
-        #Step #8 Remotes
-        for ii in range(roll(6) - len(self.remotes)):
-            self.remotes.append(self.getRemote())
-    
-        self.placeDefensesAndRemotes()
-
-        boardVals = self.getBoardValues(self.fortress.board)
-        with open(OUT_DIR + "\\fortress_readout.txt", 'w') as outfile:
-            for slot in self.memory.keys():
-                outfile.write("%s : %s\n" % ("M"+str(slot), self.memory[slot]["contents"]))
-            for item in self.fortress.board_readout.keys():
-                if "D" in item:
-                    outfile.write("%s : %s\n" % (item, self.fortress.board_readout[item]))
-                if "R" in item:
-                    outfile.write("%s : %s\n" % (item, self.fortress.board_readout[item]))
-        self.printBoard(self.fortress.board)
-        print(OUT_DIR + "\\fortress_readout.txt")
-        drawer = ImageDrawer(boardVals)
-
-newFort = DataFortress()                                                                                                                                                
+print(REMOTE_TYPES.list_names())
+fortress = DataFortress()
+fortress.writeToJSON()

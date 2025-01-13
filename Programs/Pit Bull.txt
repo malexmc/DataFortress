@@ -1,0 +1,57 @@
+        {
+          "name": "Pit Bull",
+          "description": "Detects entry, traces, hangs up on target until destroyed. Bartmoss Brainware Blowout pg. 44",
+          "icon": "",
+          "class": {
+            "name": "detection",
+            "diff": 10,
+            "costMod": 2,
+            "source": {
+              "book": "BB",
+              "page": 34
+            },
+            "description": "Detects intruders."
+          },
+          "options": [
+            {
+              "name": "Movement Ability",
+              "diff": 5,
+              "source": {
+                "book": "BB",
+                "page": 34
+              },
+              "description": "Move freely throughout the NET."
+            },
+            {
+              "name": "Trace",
+              "diff": 2,
+              "source": {
+                "book": "BB",
+                "page": 34
+              },
+              "description": "Follow program/runner through NET."
+            },
+            {
+              "name": "Endurance",
+              "diff": 3,
+              "source": {
+                "book": "BB",
+                "page": 34
+              },
+              "description": "Never quits until destroyed."
+            },
+            {
+              "name": "Hang Up",
+              "diff": 5,
+              "source": {
+                "book": "BB",
+                "page": 34
+              },
+              "description": "Sever data connections."
+            }
+          ],
+          "loaded": false,
+          "_str": 2,
+          "bookMu": 6,
+          "bookCost": 780
+        }

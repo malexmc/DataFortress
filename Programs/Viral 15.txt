@@ -1,0 +1,27 @@
+      {
+        "name": "Viral 15",
+        "coord": {
+          "x": 2,
+          "y": 6
+        },
+        "program": {
+          "name": "Viral 15",
+          "description": "Randomly erases one file each turn. Bartmoss Brainware Blowout pg. 48",
+          "icon": "",
+          "class": {
+            "name": "anti-system",
+            "diff": 15,
+            "costMod": 3,
+            "source": {
+              "book": "BB",
+              "page": 34
+            },
+            "description": "Damages computer system."
+          },
+          "options": [],
+          "loaded": false,
+          "_str": 4,
+          "bookMu": 2,
+          "bookCost": 590
+        }
+      }

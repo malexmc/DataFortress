@@ -1,0 +1,39 @@
+      {
+          "name": "Bloodhound",
+          "description": "Detects entry, traces, alerts master. Bartmoss Brainware Blowout pg. 43",
+          "icon": "",
+          "class": {
+            "name": "detection",
+            "diff": 10,
+            "costMod": 2,
+            "source": {
+              "book": "BB",
+              "page": 34
+            },
+            "description": "Detects intruders."
+          },
+          "options": [
+            {
+              "name": "Movement Ability",
+              "diff": 5,
+              "source": {
+                "book": "BB",
+                "page": 34
+              },
+              "description": "Move freely throughout the NET."
+            },
+            {
+              "name": "Trace",
+              "diff": 2,
+              "source": {
+                "book": "BB",
+                "page": 34
+              },
+              "description": "Follow program/runner through NET."
+            }
+          ],
+          "loaded": false,
+          "_str": 3,
+          "bookMu": 5,
+          "bookCost": 700
+        }

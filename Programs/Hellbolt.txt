@@ -1,0 +1,27 @@
+      {
+        "name": "Hellbolt",
+        "coord": {
+          "x": 8,
+          "y": 1
+        },
+        "program": {
+          "name": "Hellbolt",
+          "description": "1D10 physical damage to 'runner. Bartmoss Brainware Blowout pg. 55",
+          "icon": "",
+          "class": {
+            "name": "anti-personnel",
+            "diff": 20,
+            "costMod": 25,
+            "source": {
+              "book": "BB",
+              "page": 34
+            },
+            "description": "Attacks Netrunners doing 1D6 damage or mind wipe."
+          },
+          "options": [],
+          "loaded": false,
+          "_str": 4,
+          "bookMu": 4,
+          "bookCost": 6750
+        }
+      }

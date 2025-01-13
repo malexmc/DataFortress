@@ -1,0 +1,57 @@
+{
+          "name": "Hellhound",
+          "description": "Tracks target, waits, causes heart attack. Bartmoss Brainware Blowout pg. 55",
+          "icon": "",
+          "class": {
+            "name": "anti-personnel",
+            "diff": 20,
+            "costMod": 25,
+            "source": {
+              "book": "BB",
+              "page": 34
+            },
+            "description": "Attacks Netrunners doing 1D6 damage or mind wipe."
+          },
+          "options": [
+            {
+              "name": "Trace",
+              "diff": 2,
+              "source": {
+                "book": "BB",
+                "page": 34
+              },
+              "description": "Follow program/runner through NET."
+            },
+            {
+              "name": "Movement Ability",
+              "diff": 5,
+              "source": {
+                "book": "BB",
+                "page": 34
+              },
+              "description": "Move freely throughout the NET."
+            },
+            {
+              "name": "Pseudo-Intellect",
+              "diff": 6,
+              "source": {
+                "book": "BB",
+                "page": 34
+              },
+              "description": "Has INT 6."
+            },
+            {
+              "name": "Endurance",
+              "diff": 3,
+              "source": {
+                "book": "BB",
+                "page": 34
+              },
+              "description": "Never quits until destroyed."
+            }
+          ],
+          "loaded": false,
+          "_str": 6,
+          "bookMu": 6,
+          "bookCost": 10000
+        }
