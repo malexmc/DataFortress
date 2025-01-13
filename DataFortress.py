@@ -20,7 +20,7 @@ BLANK_VALUE = '   '
 PERIPHERAL_VALUE = "P"
 DEFENSE_VALUE = "D"
 CODE_GATE_VALUE = "G"
-CPU_MAX_DISTANCE = 5
+CPU_MAX_DISTANCE = 3
 OUT_DIR = os.path.dirname(os.path.realpath(__file__))
 if getattr(sys, 'frozen', False):
     OUT_DIR = os.path.dirname(sys.executable)
@@ -263,6 +263,7 @@ class DataFortress():
                 valid_cell_indices.append([ii,jj])
 
         cpus_placed = 0
+        center_cell = [math.floor(len(self.board)/2), math.floor(len(self.board[1])/2)]
         cpu_first_spot = []
         while cpus_placed < self.CPU_count:
         #Allow placement on any cell but outermost layer
@@ -272,7 +273,9 @@ class DataFortress():
                 within_range = False
                 while not within_range:
                     cpu_cell = random.choice(valid_cell_indices)
-                    cpu_distance = abs(cpu_cell[0] - cpu_first_spot[0]) + abs(cpu_cell[1] - cpu_first_spot[1])
+                    cpu_distance = math.pow(cpu_cell[0] - center_cell[0], 2) + math.pow(cpu_cell[1] - center_cell[1], 2)
+                    cpu_distance = math.sqrt(cpu_distance)
+                    #cpu_distance = abs(cpu_cell[0] - center_cell[0]) + abs(cpu_cell[1] - center_cell[1])
                     if cpu_distance <= CPU_MAX_DISTANCE:
                         within_range = True
             else:
