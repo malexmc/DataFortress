@@ -1,5 +1,5 @@
 from enum import Enum
-import Utils
+from Utils import *
 
 class Memory():
     def __init__(self, name=None, CPU=None, contents=None, memory_remaining=10,  coords=[0,0]):
@@ -22,8 +22,5 @@ class Memory():
         
         if MU_NODES_STRING not in json_object:
             json_object[MU_NODES_STRING] = []
-        mu_nodes_dict = {
-                            "x" : self.coords[0],
-                            "y" : self.coords[1],
-                        }
+        mu_nodes_dict = printCoords(self.coords)
         json_object[MU_NODES_STRING].append(mu_nodes_dict)

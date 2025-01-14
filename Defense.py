@@ -1,5 +1,5 @@
 from enum import Enum
-from Utils import roll,getRand
+from Utils import *
 import json
 import os, sys
 
@@ -17,9 +17,9 @@ class DEFENSE_TYPES(Enum):
 
 
 class Defense():
-    def __init__(self, name=None, coord=None):
+    def __init__(self, name=None, coords=None):
         self.name = name.title() if name is not None else None #make sure casing is correct
-        self.coord = coord
+        self.coords = coords
         self.program = None
 
         if self.name is not None:
@@ -43,12 +43,12 @@ class Defense():
                 subtype = "Bloodhound"
                 memory_cost = 5
             elif subtype in [5,6]:
-                subtype = "Pitbull"
+                subtype = "Pit Bull"
                 memory_cost = 6
         elif type in [5,6]:
             type = "Anti-IC"
             if subtype in [1,2]:
-                subtype = "Killer (str=%s)" % str(roll(6))
+                subtype = "Killer II"
                 memory_cost = 5
             elif subtype in [3,4]:
                 subtype = "Manticore"
@@ -71,7 +71,7 @@ class Defense():
                 subtype = "Viral 15"
                 memory_cost = 2
             elif subtype == 5:
-                subtype = "DecKrash"
+                subtype = "DecKRASH"
                 memory_cost = 2
             elif subtype == 6:
                 subtype = "Murphy"
@@ -106,10 +106,7 @@ class Defense():
             json_object[DEFENSES_STRING] = []
         remote_dict = {
                         "name" : self.name,
-                        "coord" : {
-                                    "x" : self.coord[0],
-                                    "y" : self.coord[1]
-                                  },
+                        "coord" : printCoords(self.coords),
                         "program" : self.program
                       }
         json_object[DEFENSES_STRING].append(remote_dict)

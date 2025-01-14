@@ -1,3 +1,5 @@
+from Utils import *
+
 class DataWall():
     def __init__(self, str=0, coords=[1,1]):
         self.str = str
@@ -13,8 +15,6 @@ class DataWall():
         if DATAWALLNODES_STRING not in json_object:
             json_object[DATAWALLNODES_STRING] = []
             
-        remote_dict = {
-                        "x" : self.coords[0],
-                        "y" : self.coords[1]
-                      }
+        remote_dict = printCoords(self.coords)
+
         json_object[DATAWALLNODES_STRING].append(remote_dict)

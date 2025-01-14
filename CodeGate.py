@@ -14,9 +14,6 @@ class CodeGate():
             json_object[CODEGATES_STRING] = []
         remote_dict = {
                         "str" : self.str,
-                        "coord" : {
-                                    "x" : self.coords[0],
-                                    "y" : self.coords[1]
-                                  }
+                        "coord" : printCoords(self.coords)
                       }
         json_object[CODEGATES_STRING].append(remote_dict)

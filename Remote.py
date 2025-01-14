@@ -1,5 +1,5 @@
 from enum import Enum
-from Utils import roll,getRand
+from Utils import *
 
 class REMOTE_TYPES(Enum):
     TERMINAL = 6
@@ -82,9 +82,6 @@ class Remote():
         remote_dict = {
                         "name" : self.name,
                         "type" : self.type.value,
-                        "coord" : {
-                                    "x" : self.coords[0],
-                                    "y" : self.coords[1]
-                                  }
+                        "coord" : printCoords(self.coords)
                       }
         json_object[REMOTES_STRING].append(remote_dict)

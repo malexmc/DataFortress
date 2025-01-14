@@ -14,6 +14,8 @@ from CPU import *
 from Memory import *
 from DataWall import *
 from CodeGate import *
+import string
+from wonderwords import RandomWord
 
 WALL_VALUE = '---'
 BLANK_VALUE = '   '
@@ -182,11 +184,14 @@ class DataFortress():
             board_json["skills"] = []
             board_json["defenses"] = []
             board_json["datawallStr"] = self.data_wall_strength
+            board_json["cpu"] = self.CPU_count
             for ii in range(1, len(self.board)): # all elements will have an addToJSON method, so run them all in a batch
                 for jj in range(1, len(self.board[1])):
                     current_cell = self.getBoardCell([ii, jj])
                     if current_cell is not None:
                         current_cell.addToJSON(board_json)
+            for skill in self.skills:
+                skill.addToJSON(board_json)
             outfile.write(json.dumps(board_json))
 
     def setBoardCell(self, cell, value):
@@ -203,12 +208,15 @@ class DataFortress():
         for remote in self.remotes:
             if remote.coords not in self.inside_coords:
                 remote_placed = False
+                unckecked_coords = [coord for coord in self.inside_coords]
                 while not remote_placed:
-                    current_cell = random.choice(self.inside_coords)
+                    current_cell = random.choice(unckecked_coords)
                     if self.getBoardCell(current_cell) is None:
                         remote.coords = current_cell
                         self.setBoardCell(current_cell, remote)
                         remote_placed = True
+                    else:
+                        unckecked_coords.remove(current_cell)
 
     def makeDefenses(self):
         for ii in range(roll(6)+self.CPU_count-len(self.defenses)):
@@ -227,7 +235,16 @@ class DataFortress():
 
     def setSkills(self):
        for ii in range(5):
-            self.skills.append(Skill().rollRandomly())
+            new_skill =Skill().rollRandomly()
+            skill_placed = False
+            while not skill_placed:
+                current_skills = [skill.key for skill in self.skills]
+                if new_skill.key not in current_skills:
+                    self.skills.append(Skill().rollRandomly())
+                    skill_placed = True
+                else:
+                    new_skill.rollRandomly()
+                
 
     def setFiles(self):
         for ii in range((8*self.CPU_count)-len(self.files) ):
@@ -268,18 +285,17 @@ class DataFortress():
         while cpus_placed < self.CPU_count:
         #Allow placement on any cell but outermost layer
             cpu_cell = None
-            if cpus_placed > 0:
                 #If we've placed a CPU, make sure others are within CPU_MAX_DISTANCE to aid clustering
-                within_range = False
-                while not within_range:
-                    cpu_cell = random.choice(valid_cell_indices)
-                    cpu_distance = math.pow(cpu_cell[0] - center_cell[0], 2) + math.pow(cpu_cell[1] - center_cell[1], 2)
-                    cpu_distance = math.sqrt(cpu_distance)
-                    #cpu_distance = abs(cpu_cell[0] - center_cell[0]) + abs(cpu_cell[1] - center_cell[1])
-                    if cpu_distance <= CPU_MAX_DISTANCE:
-                        within_range = True
-            else:
+            within_range = False
+            while not within_range:
                 cpu_cell = random.choice(valid_cell_indices)
+                cpu_distance = math.pow(cpu_cell[0] - center_cell[0], 2) + math.pow(cpu_cell[1] - center_cell[1], 2)
+                cpu_distance = math.sqrt(cpu_distance)
+                #cpu_distance = abs(cpu_cell[0] - center_cell[0]) + abs(cpu_cell[1] - center_cell[1])
+                if cpu_distance <= CPU_MAX_DISTANCE:
+                        print("CPU_CELL: %s" % str(cpu_cell))
+                        print("DISTANCE: %s" % str(cpu_distance))
+                        within_range = True
             #Place CPUs and Memory
             if self.getBoardCell(cpu_cell) is None:
                 current_CPU = CPU(name=cpus_placed, coords=cpu_cell)
@@ -294,7 +310,7 @@ class DataFortress():
                     memory_placed = False
                     while not memory_placed:
                         target = random.choice(all_valid_spots)
-                        target_neighbors = getAdjacentDict(target, self)
+                        target_neighbors = getAdjacentDict(target.coords, self)
                         shuffled_directions = [e for e in target_neighbors.keys()]
                         random.shuffle(shuffled_directions)
                         for direction in shuffled_directions:
@@ -323,70 +339,162 @@ class DataFortress():
     def setBoundsAndInsideSpaces(self):
         '''Once CPUs and memory are placed, create a "bounding box".
         This will represent the outermost inside perimiter before walls can be placed.'''
-        #Make sure the bounds have enough room for everyone. This alrogithm can be improved later
-        bounds_offset = 0
-        inside_space_count = len(self.board) * len(self.board[1])
-        required_space_count = (self.CPU_count*5) + len(self.remotes) + len(self.defenses)
-        while inside_space_count < required_space_count:
-            bounds_offset += 1
-            inside_space_count = (len(self.board)+(2*bounds_offset)) * (len(self.board[1])+(2*bounds_offset))
 
-        #Start these opposite of intended
+        #Find the minimum bounds. Start these opposite of intended
         self.top_bound = len(self.board[1])
         self.bottom_bound = 0
         self.left_bound = len(self.board)
         self.right_bound = 0
-        for row in range(1, len(self.board)):
-            for col in range(1, len(self.board[1])):
-                current_cell = [row,col]
+        for col in range(1, len(self.board)):
+            for row in range(1, len(self.board[1])):
+                current_cell = [col,row]
                 if self.getBoardCell(current_cell) == None:
                     continue
-                current_row = current_cell[0]
-                current_col = current_cell[1]
+                current_col = current_cell[0]
+                current_row = current_cell[1]
                 if current_row < self.top_bound:
-                    self.top_bound = current_row-bounds_offset
+                    self.top_bound = current_row
                 if current_row > self.bottom_bound:
-                    self.bottom_bound = current_row+bounds_offset
+                    self.bottom_bound = current_row
                 if current_col < self.left_bound:
-                    self.left_bound = current_col-bounds_offset
+                    self.left_bound = current_col
                 if current_col > self.right_bound:
-                    self.right_bound = current_col+bounds_offset
+                    self.right_bound = current_col
+
+        #Make sure the bounds have enough room for everyone. This alrogithm can be improved later
+
+        inside_space_count = (self.bottom_bound-self.top_bound) * (self.right_bound-self.left_bound)
+        required_space_count = (self.CPU_count*5) + len(self.remotes) + len(self.defenses) + 5 #This is not calculating right, so buffer by 5
+
+        def getDistanceFromEdge(direction):
+            if direction == DIRECTIONS.LEFT:
+                return self.left_bound
+            elif direction == DIRECTIONS.RIGHT:
+                return len(self.board) - self.right_bound
+            elif direction == DIRECTIONS.UP:
+                return self.top_bound
+            elif direction == DIRECTIONS.DOWN:
+                return len(self.board[1]) - self.bottom_bound
+        
+        while inside_space_count < required_space_count:
+            random_directions = DIRECTIONS.list_names()
+            direction_text = random_directions[0]
+            furthest_direction_from_edge = DIRECTIONS[direction_text]
+            random_directions.remove(direction_text)
+            while len(random_directions) > 0:
+                direction_text = random.choice(random_directions)
+                next_direction = DIRECTIONS[direction_text]
+                next_distance = getDistanceFromEdge(next_direction)
+                random_directions.remove(direction_text)
+                if next_distance > getDistanceFromEdge(furthest_direction_from_edge):
+                    furthest_direction_from_edge = next_direction
+            
+            if furthest_direction_from_edge == DIRECTIONS.LEFT:
+                self.left_bound -= 1
+            elif furthest_direction_from_edge == DIRECTIONS.RIGHT:
+                self.right_bound += 1
+            elif furthest_direction_from_edge == DIRECTIONS.UP:
+                self.top_bound -= 1
+            elif furthest_direction_from_edge == DIRECTIONS.DOWN:
+                self.bottom_bound += 1
+
+            top_to_bottom = self.bottom_bound-self.top_bound
+            left_to_right = self.right_bound-self.left_bound
+            inside_space_count = top_to_bottom * left_to_right
 
         self.inside_coords = []
         for col in range(self.left_bound, self.right_bound):
             for row in range(self.top_bound, self.bottom_bound):
-                self.inside_coords.append([row,col])
+                self.inside_coords.append([col,row])
 
     def setWallsAndGates(self):
         '''Place walls around the outside of the bounding box'''
+        def updateOffset(offset):
+            current_roll = roll(10)
+            if current_roll <= 3:
+                if offset == 0:
+                    current_roll = roll(2)
+                    if current_roll == 1:
+                        offset = 1
+                    else:
+                        offset = -1
+                else:
+                    offset = 0
+            return offset
+        
         wall_box = [] #The "default" cells for all walls
-        for col in range(self.left_bound-2, self.right_bound+2):
-            wall_box.append([self.top_bound-2, col])
+        for col in range(self.left_bound-2, self.right_bound+2): #Top Row
+            wall_box.append([col, self.top_bound-2])
         for row in range(self.top_bound-2, self.bottom_bound+2): #set offset for top at -1 since we placed -2 in the last batch
-            wall_box.append([row, self.right_bound+2])
+            wall_box.append([self.right_bound+2, row])
         for col in range(self.right_bound+2, self.left_bound-2, -1):
-            wall_box.append([self.bottom_bound+2, col])
+            wall_box.append([col, self.bottom_bound+2])
         for row in range(self.bottom_bound+2, self.top_bound-2, -1):
-            wall_box.append([row, self.left_bound-2])
+            wall_box.append([self.left_bound-2, row])
         banana = "pine"
         #TODO: Use wall box to go through wall placement algorithm
+        offset = 0
         wall_list = []
         for wall_coords in wall_box:
+            #If we aren't a corner...
+            if not ((wall_coords[0] == self.left_bound-2 ^ wall_coords[0] == self.right_bound+2) and (wall_coords[1] == self.top_bound-2 ^ wall_coords[1] == self.bottom_bound+2)):
+                #offset things as needed
+                if wall_coords[1] == self.top_bound-2:
+                    wall_coords[1] += offset
+                elif wall_coords[1] == self.bottom_bound+2:
+                    wall_coords[1] += offset
+                elif wall_coords[0] == self.left_bound-2:
+                    wall_coords[0] += offset
+                elif wall_coords[0] == self.right_bound+2:
+                    wall_coords[0] += offset
+                offset = updateOffset(offset)
+            else:
+                offset = 0
+
             wall = DataWall(str=self.data_wall_strength, coords=wall_coords)
             self.setBoardCell(wall_coords, wall)
             wall_list.append(wall)
+            
         for ii in range(self.CPU_count):
-            wall = random.choice(wall_list)
-            gate_coords = wall.coords
-            gate = CodeGate(cpu_count=self.CPU_count, coords=gate_coords)
-            self.setBoardCell(gate_coords, gate)
-            wall_list.remove(wall)
+            gate_placed = False
+            while not gate_placed:
+                wall = random.choice(wall_list)
+                if not ((wall.coords[0] == self.left_bound-2 ^ wall.coords[0] == self.right_bound+2) and (wall.coords[1] == self.top_bound-2 ^ wall.coords[1] == self.bottom_bound+2)):
+                    gate_coords = wall.coords
+                    gate = CodeGate(cpu_count=self.CPU_count, coords=gate_coords)
+                    self.setBoardCell(gate_coords, gate)
+                    wall_list.remove(wall)
+                    gate_placed = True
 
-        
-                
+        #Make Inner Walls
+        for coords in self.inside_coords:
+            if self.getBoardCell(coords) is None:
+                wall_chance = percentChance(25)
+                for neighbor_coords in getAdjacentList(coords, self):
+                    if type(self.getBoardCell(neighbor_coords)) is DataWall:
+                        wall_chance = percentChance(40)
+                        break
+                if wall_chance == 1:
+                    wall = DataWall(str=self.data_wall_strength, coords=coords)
+                    self.setBoardCell(coords, wall)
+
+    def id_generator(self, size=4, chars=string.ascii_uppercase + string.digits):
+        return ''.join(random.choice(chars) for _ in range(size))
+    
+    def makeName(self):
+        rw = RandomWord()
+        return rw.word() + "_" + rw.word() + "_" + self.id_generator()
+        # words = roll(3)
+        # rw = RandomWord()
+        # if words == 1:
+        #     return rw.word() + "_" + self.id_generator()
+        # if words == 2:
+        #     return rw.word() + "_" + rw.word() + "_" + self.id_generator()
+        #if words == 3:
+        #    return rw.word() + "_" + rw.word() + "_" + rw.word() + "_" + self.id_generator()
 
     def __init__(self):
-        self.name = "ABC"
+        self.name = self.makeName()
         self.board = {}
         self.CPUs = []
         self.memory = []
@@ -406,9 +514,10 @@ class DataFortress():
         self.setFiles()
         self.setCPUsAndMemory()
         self.makeRemotes()
+        self.makeDefenses()
         self.setBoundsAndInsideSpaces()
         self.setWallsAndGates()
-        #self.setDefenses()
+        self.setDefenses()
         self.setRemotes()
         self.setSkills()
 

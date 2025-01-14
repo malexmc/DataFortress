@@ -1,5 +1,5 @@
 from enum import Enum
-import Utils
+from Utils import *
 
 CPU_MAX_DISTANCE = 5
 
@@ -12,8 +12,5 @@ class CPU():
         CPU_NODES_STRING = "cpuNodes"
         if CPU_NODES_STRING not in json_object:
             json_object[CPU_NODES_STRING] = []
-        cpu_nodes_dict = {
-                            "x" : self.coords[0],
-                            "y" : self.coords[1],
-                        }
+        cpu_nodes_dict = printCoords(self.coords)
         json_object[CPU_NODES_STRING].append(cpu_nodes_dict)
